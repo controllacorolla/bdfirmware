@@ -485,7 +485,7 @@ JSValue native_drawBitmap(JSContext *ctx, JSValue *this_val, int argc, JSValue *
     // Handle palette if needed (only for 4bpp and 1bpp)
     uint16_t *palette = nullptr;
     size_t paletteSize = 0;
-    if ((bpp == 4 || bpp == 1) && JS_IsTypedArray(ctx, argv[6])) {
+    if ((bpp == 4 || bpp == 1) && argc > 6 && JS_IsTypedArray(ctx, argv[6])) {
         palette = (uint16_t *)JS_GetTypedArrayBuffer(ctx, &paletteSize, argv[6]);
         if (!palette || paletteSize == 0) {
             return JS_ThrowTypeError(ctx, "%s: Invalid palette! Expected a valid ArrayBuffer.", "drawBitmap");
@@ -666,8 +666,8 @@ JSValue native_drawJpg(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
         base = file.paramOffset;
     }
 
-    if (argc > base && JS_IsNumber(ctx, argv[base + 1])) JS_ToInt32(ctx, &x, argv[base + 1]);
-    if (argc > base + 1 && JS_IsNumber(ctx, argv[base + 2])) JS_ToInt32(ctx, &y, argv[base + 2]);
+    if (argc > base + 1 && JS_IsNumber(ctx, argv[base + 1])) JS_ToInt32(ctx, &x, argv[base + 1]);
+    if (argc > base + 2 && JS_IsNumber(ctx, argv[base + 2])) JS_ToInt32(ctx, &y, argv[base + 2]);
     if (argc > base + 3) { // guard must match the argv[base + 3] accessed below
         if (JS_IsBool(argv[base + 3])) center = JS_ToBool(ctx, argv[base + 3]);
         else if (JS_IsNumber(ctx, argv[base + 3])) JS_ToInt32(ctx, &center, argv[base + 3]);

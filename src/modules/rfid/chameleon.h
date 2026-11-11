@@ -70,7 +70,7 @@ private:
     ChameleonUltra chmUltra = ChameleonUltra(true);
     ChameleonUltra::LfTag lfTagData;
     ChameleonUltra::HfTag hfTagData;
-    AppMode currentMode;
+    AppMode currentMode = BATTERY_INFO_MODE;
     PrintableUID printableHFUID;
     String printableLFUID;
     String dumpFilename = "";

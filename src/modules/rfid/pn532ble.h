@@ -60,7 +60,7 @@ private:
     void loadDumpMenu();
     void loadNdefEmulateMenu();
     String emulationNdefData = "https://pn532killer.com";
-    AppMode currentMode;
+    AppMode currentMode = STANDBY_MODE;
     void setMode(AppMode mode);
     uint8_t getMifareClassicSectorCount(uint8_t sak);
     String saveHfDumpBinFile(std::vector<uint8_t> data, String uid, String prefix);

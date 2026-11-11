@@ -80,9 +80,7 @@ void cleanupClickerUSB() {
         // Keep instance alive to avoid deleting a polymorphic type with
         // non-virtual dtor and to preserve lazy HID registration behavior.
     }
-    USB.~ESPUSB(); // Explicit destructor call
-    delay(100);
-    USB.enableDFU(); // Re-enable DFU for future uploads
+    USB.enableDFU();
     delay(100);
     // Serial.println("[USB] Cleanup complete");
 }
@@ -704,6 +702,7 @@ unsigned long performClicking(const char *btnNameStr) {
  * stack corruption during USB init/cleanup operations
  */
 void clicker_setup() {
+  while (true) {
     // UI state variables
     int selected_item = 0;
     int prev_selected = 0;
@@ -867,13 +866,11 @@ void clicker_setup() {
 
     // Handle user choice
     if (restart) {
-        // Serial.println("[CLICKER] Restarting application");
-        clicker_setup(); // Recursive call to restart
-        return;
+        continue;
     } else {
-        // Serial.println("[CLICKER] Exiting to main menu");
         return;
     }
+  } // end while(true)
 }
 
 /**

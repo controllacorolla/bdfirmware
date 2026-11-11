@@ -923,7 +923,7 @@ String extractSSID(const wifi_promiscuous_pkt_t *packet) {
                 }
             }
             if (hidden) return "*HIDDEN*";
-            char ssid[len + 1];
+            char ssid[33];
             memcpy(ssid, &frame[pos + 2], len);
             ssid[len] = '\0';
             return String(ssid);
@@ -1057,7 +1057,7 @@ void analyzeClientBehavior(const ProbeRequest &probe) {
         behavior.probeCount = 1;
         behavior.avgRSSI = probe.rssi;
         behavior.probedSSIDs.push_back(probe.ssid);
-        behavior.favoriteChannel = probe.channel;
+        behavior.favoriteChannel = (probe.channel >= 1 && probe.channel <= 14) ? probe.channel : 1;
         behavior.lastKarmaAttempt = 0;
         behavior.isVulnerable = (!probeSSIDEmpty(probe) && !probeSSIDEquals(probe, "*WILDCARD*"));
         clientBehaviors[probe.fingerprint] = behavior;
@@ -1069,7 +1069,8 @@ void analyzeClientBehavior(const ProbeRequest &probe) {
         behavior.avgRSSI = (behavior.avgRSSI + probe.rssi) / 2;
         if (probe.channel >= 1 && probe.channel <= 14) {
             channelActivity[probe.channel - 1]++;
-            if (channelActivity[probe.channel - 1] > channelActivity[behavior.favoriteChannel - 1])
+            if (behavior.favoriteChannel >= 1 && behavior.favoriteChannel <= 14
+                && channelActivity[probe.channel - 1] > channelActivity[behavior.favoriteChannel - 1])
                 behavior.favoriteChannel = probe.channel;
         }
         bool ssidExists = false;
@@ -1141,7 +1142,7 @@ size_t buildEnhancedProbeResponse(
     uint8_t *buffer, const String &ssid, const String &targetMAC, uint8_t channel, const RSNInfo &rsn,
     bool isHidden
 ) {
-    uint8_t pos = 0;
+    size_t pos = 0;
     buffer[pos++] = 0x50;
     buffer[pos++] = 0x00;
     buffer[pos++] = 0x00;
@@ -1225,7 +1226,7 @@ size_t buildEnhancedProbeResponse(
 }
 
 size_t buildBeaconFrame(uint8_t *buffer, const String &ssid, uint8_t channel, const RSNInfo &rsn) {
-    uint8_t pos = 0;
+    size_t pos = 0;
     buffer[pos++] = 0x80;
     buffer[pos++] = 0x00;
     buffer[pos++] = 0x00;
@@ -1326,7 +1327,7 @@ void sendBeaconFrameHelper(const String &ssid, uint8_t channel) {
 void sendProbeResponse(const String &ssid, const String &mac, uint8_t channel) {
     if (ssid.isEmpty() || mac.isEmpty()) return;
     uint8_t probeResponse[128] = {0};
-    uint8_t pos = 0;
+    size_t pos = 0;
     probeResponse[pos++] = 0x50;
     probeResponse[pos++] = 0x00;
     probeResponse[pos++] = 0x00;

@@ -41,11 +41,11 @@ void decimalToHexString(uint64_t decimal, char *output) {
     int index = 15;
 
     // Initialize tem string with zeros
-    for (int i = 0; i < 64; i++) { temp[i] = '0'; }
+    memset(temp, '0', 65);
     temp[65] = '\0';
 
     // Convert decimal to hexadecimal
-    while (decimal > 0) {
+    while (decimal > 0 && index >= 0) {
         temp[index--] = hexDigits[decimal % 16];
         decimal /= 16;
     }

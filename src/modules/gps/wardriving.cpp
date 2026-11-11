@@ -184,7 +184,7 @@ void Wardriving::display_banner() {
     uint32_t hours = elapsedSeconds / 3600;
     uint32_t minutes = (elapsedSeconds / 60) % 60;
     uint32_t seconds = elapsedSeconds % 60;
-    padprintf("Distance: %.2fkm  ET: %02u:%02u:%02u\n", (unsigned)hours, (unsigned)minutes, (unsigned)seconds);
+    padprintf("Distance: %.2fkm  ET: %02u:%02u:%02u\n", distance / 1000.0, (unsigned)hours, (unsigned)minutes, (unsigned)seconds);
     // Serial.printf("Wardrive Elapsed Time: %02lu:%02lu:%02lu\n", hours, minutes, seconds);
 }
 
@@ -543,7 +543,7 @@ void Wardriving::restorePins() {
                 bruceConfigPins.gps_bus.rx == bruceConfigPins.NRF24_bus.cs ||
 #if !defined(LITE_VERSION)
                 bruceConfigPins.gps_bus.rx == bruceConfigPins.W5500_bus.cs ||
-                bruceConfigPins.gps_bus.rx == bruceConfigPins.W5500_bus.cs ||
+                bruceConfigPins.gps_bus.rx == bruceConfigPins.LoRa_bus.cs ||
 #endif
                 bruceConfigPins.gps_bus.rx == bruceConfigPins.SDCARD_bus.cs) {
                 // If it is conflicting to an SPI CS pin, keep it HIGH

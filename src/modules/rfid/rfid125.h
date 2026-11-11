@@ -45,8 +45,8 @@ public:
 
 private:
     HardwareSerial *_stream = NULL;
-    RFID125_State _initial_state;
-    RFID125_State _current_state;
+    RFID125_State _initial_state = READ_MODE;
+    RFID125_State _current_state = READ_MODE;
     String _printable_data;
     String _printable_checksum;
     bool _tag_read = false;

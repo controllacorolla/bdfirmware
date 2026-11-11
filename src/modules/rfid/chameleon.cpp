@@ -811,11 +811,11 @@ bool Chameleon::readMifareClassicDataBlocks(uint8_t *key) {
 
     String strPage;
 
-    for (byte i = 0; i < totalPages; i++) {
+    for (uint16_t i = 0; i < totalPages; i++) {
         if (!chmUltra.cmdMfReadBlock(i, key)) return false;
 
         strPage = "";
-        for (byte index = 0; index < chmUltra.cmdResponse.dataSize; index++) {
+        for (uint16_t index = 0; index < chmUltra.cmdResponse.dataSize; index++) {
             strPage += chmUltra.cmdResponse.data[index] < 0x10 ? F(" 0") : F(" ");
             strPage += String(chmUltra.cmdResponse.data[index], HEX);
         }
@@ -845,12 +845,12 @@ bool Chameleon::readMifareUltralightDataBlocks() {
         default: totalPages = 256; break;
     }
 
-    for (byte i = 0; i < totalPages; i++) {
+    for (uint16_t i = 0; i < totalPages; i++) {
         if (!chmUltra.cmdMfuReadPage(i)) return false;
         if (chmUltra.cmdResponse.dataSize == 0) break;
 
         strPage = "";
-        for (byte index = 0; index < chmUltra.cmdResponse.dataSize; index++) {
+        for (uint16_t index = 0; index < chmUltra.cmdResponse.dataSize; index++) {
             strPage += chmUltra.cmdResponse.data[index] < 0x10 ? F(" 0") : F(" ");
             strPage += String(chmUltra.cmdResponse.data[index], HEX);
         }

@@ -225,6 +225,7 @@ void EMVReader::emv_read_visa(std::vector<uint8_t> *pdol_data, EMVCard *card) {
         } else {
             Serial.println("PAN found in Track 2 Equivalent Data");
             card->pan = (uint8_t *)malloc(8);
+            if (!card->pan) return;
             memcpy(card->pan, container.data(), 8 * sizeof(uint8_t)); // Copy data from TLV to struct
             card->pan_len = 8;
 
@@ -232,6 +233,7 @@ void EMVReader::emv_read_visa(std::vector<uint8_t> *pdol_data, EMVCard *card) {
             // Index 9 is second digit of ValidTo month and first digit of ValidTo year
             // Index 10 is second digit of ValidTo year and first digit of Service Code
             card->validto = (uint8_t *)malloc(2);
+            if (!card->validto) return;
             card->validto[0] = ((container[9] & 0x0F) << 4) + ((container[10] & 0xF0) >> 4);
             card->validto[1] = ((container[8] & 0x0F) << 4) + ((container[9] & 0xF0) >> 4);
 
@@ -278,7 +280,7 @@ void EMVReader::read_afl(EMVCard *card, std::vector<uint8_t> *afl) {
         uint8_t record_end = afl->at(i + 2);
 
         // EMV AFL says to read all records from record_start to record_end inclusive.
-        for (uint8_t rec = record_start; rec <= record_end; rec++) {
+        for (uint16_t rec = record_start; rec <= record_end; rec++) {
             std::vector<uint8_t> afl_content = emv_read_record(rec, (sfi << 3) | 0b00000100);
             if (afl_content.empty()) {
                 Serial.println("Can't read AFL record");
@@ -327,6 +329,7 @@ void EMVReader::read_afl(EMVCard *card, std::vector<uint8_t> *afl) {
 }
 
 bool is_visa(EMVCard *card) {
+    if (!card->aid) return false;
     for (size_t i = 0; i < AID_DICT_SIZE; i++) {
         if (memcmp(card->aid, known_aid[i].aid, 7) == 0) {
             if (known_aid[i].vendor == EMV_VISA) return true;
@@ -394,7 +397,7 @@ std::string BinToAscii(uint8_t *BinData, size_t size)
 {
     char AsciiHexNo[5];
     std::string Return;
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0; i < size; i++) {
         sprintf(AsciiHexNo, "%02X", BinData[i]);
         Return += AsciiHexNo;
     }

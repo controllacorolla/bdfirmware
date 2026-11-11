@@ -75,7 +75,7 @@ private:
 
 public:
     EMVReader() { setup(); };
-    ~EMVReader() {};
+    ~EMVReader() { delete _rfid; };
     void setup();
 };
 

@@ -29,6 +29,16 @@ const char *faces[30]; // Increase size if needed
 const char *names[30]; // Increase size if needed
 int num_faces = 0;
 int num_names = 0;
+static bool faces_names_heap = false;
+
+static void freeFacesAndNames() {
+    if (!faces_names_heap) return;
+    for (int i = 0; i < num_faces; i++) { free((void *)faces[i]); faces[i] = nullptr; }
+    for (int i = 0; i < num_names; i++) { free((void *)names[i]); names[i] = nullptr; }
+    num_faces = 0;
+    num_names = 0;
+    faces_names_heap = false;
+}
 
 // External variable for all channels toggle
 extern bool use_all_channels;
@@ -87,7 +97,9 @@ void send_pwnagotchi_beacon(uint8_t channel, const char *face, const char *name)
 
     uint16_t json_len = json_str.length();
     uint8_t header_len = 2 + ((json_len / 255) * 2);
-    uint8_t beacon_frame[sizeof(beacon_frame_template) + json_len + header_len];
+    size_t frame_len = sizeof(beacon_frame_template) + json_len + header_len;
+    uint8_t *beacon_frame = (uint8_t *)malloc(frame_len);
+    if (!beacon_frame) return;
     memcpy(beacon_frame, beacon_frame_template, sizeof(beacon_frame_template));
 
     // Ajout des données JSON à la trame beacon
@@ -104,7 +116,8 @@ void send_pwnagotchi_beacon(uint8_t channel, const char *face, const char *name)
 
     // Définir le canal et envoyer la trame
     esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
-    wifiRawTx(WIFI_IF_AP, beacon_frame, sizeof(beacon_frame));
+    wifiRawTx(WIFI_IF_AP, beacon_frame, frame_len);
+    free(beacon_frame);
 }
 
 const char *pwnd_faces[] = {
@@ -353,6 +366,7 @@ void loadFacesAndNames() {
             }
         }
         file.close();
+        faces_names_heap = true;
 
         // If the selected file doesn't contain names and faces, load the default ones
         if (num_names == 0 || num_faces == 0) {
@@ -387,6 +401,7 @@ void send_pwnagotchi_beacon_main() {
 
     // Check if file was loaded
     if (num_faces == 0 or num_names == 0) {
+        freeFacesAndNames();
         displayTextLine("No config file");
         vTaskDelay(1000 / portTICK_RATE_MS);
         return;
@@ -403,5 +418,6 @@ void send_pwnagotchi_beacon_main() {
 
     // Display the spam status and wait for user input
     displaySpamStatus();
+    freeFacesAndNames();
 }
 #endif

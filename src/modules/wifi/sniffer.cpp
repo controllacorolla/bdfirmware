@@ -92,7 +92,11 @@ std::map<uint64_t, String> beaconSsidCache;
 const size_t MAX_CAPTURE_SSID_LEN = 32;
 const size_t SNIFFER_QUEUE_DEPTH = 48;
 std::set<uint64_t> handshakeReadyBssids;
-portMUX_TYPE handshakeReadyMux = portMUX_INITIALIZER_UNLOCKED;
+static SemaphoreHandle_t handshakeReadyMtx = nullptr;
+static StaticSemaphore_t handshakeReadyMtxBuf;
+static inline void ensureHandshakeMtx() {
+    if (!handshakeReadyMtx) handshakeReadyMtx = xSemaphoreCreateMutexStatic(&handshakeReadyMtxBuf);
+}
 std::set<uint64_t> handshakeBeaconLogged;
 std::map<uint64_t, HandshakeTracker> perApHandshakeTracker;
 
@@ -486,39 +490,49 @@ static String buildHandshakePath(const uint8_t *mac, const char *ssid) {
 static bool shouldSaveBeaconForHandshake(const uint8_t *mac) {
     if (!mac) return false;
     uint64_t key = macToKey(mac);
+    ensureHandshakeMtx();
     bool ready = false;
-    portENTER_CRITICAL(&handshakeReadyMux);
-    ready = handshakeReadyBssids.find(key) != handshakeReadyBssids.end();
-    portEXIT_CRITICAL(&handshakeReadyMux);
+    if (xSemaphoreTake(handshakeReadyMtx, pdMS_TO_TICKS(50)) == pdTRUE) {
+        ready = handshakeReadyBssids.find(key) != handshakeReadyBssids.end();
+        xSemaphoreGive(handshakeReadyMtx);
+    }
     return ready;
 }
 
 static bool hasCompleteHandshake(uint64_t apKey) {
+    ensureHandshakeMtx();
     bool ready = false;
-    portENTER_CRITICAL(&handshakeReadyMux);
-    ready = handshakeReadyBssids.find(apKey) != handshakeReadyBssids.end();
-    portEXIT_CRITICAL(&handshakeReadyMux);
+    if (xSemaphoreTake(handshakeReadyMtx, pdMS_TO_TICKS(50)) == pdTRUE) {
+        ready = handshakeReadyBssids.find(apKey) != handshakeReadyBssids.end();
+        xSemaphoreGive(handshakeReadyMtx);
+    }
     return ready;
 }
 
 void markHandshakeReady(uint64_t key) {
-    portENTER_CRITICAL(&handshakeReadyMux);
-    handshakeReadyBssids.insert(key);
-    portEXIT_CRITICAL(&handshakeReadyMux);
+    ensureHandshakeMtx();
+    if (xSemaphoreTake(handshakeReadyMtx, pdMS_TO_TICKS(50)) == pdTRUE) {
+        handshakeReadyBssids.insert(key);
+        xSemaphoreGive(handshakeReadyMtx);
+    }
 }
 
 bool sniffer_is_handshake_ready(uint64_t key) {
+    ensureHandshakeMtx();
     bool ready = false;
-    portENTER_CRITICAL(&handshakeReadyMux);
-    ready = handshakeReadyBssids.find(key) != handshakeReadyBssids.end();
-    portEXIT_CRITICAL(&handshakeReadyMux);
+    if (xSemaphoreTake(handshakeReadyMtx, pdMS_TO_TICKS(50)) == pdTRUE) {
+        ready = handshakeReadyBssids.find(key) != handshakeReadyBssids.end();
+        xSemaphoreGive(handshakeReadyMtx);
+    }
     return ready;
 }
 
 static void resetHandshakeTracking() {
-    portENTER_CRITICAL(&handshakeReadyMux);
-    handshakeReadyBssids.clear();
-    portEXIT_CRITICAL(&handshakeReadyMux);
+    ensureHandshakeMtx();
+    if (xSemaphoreTake(handshakeReadyMtx, pdMS_TO_TICKS(50)) == pdTRUE) {
+        handshakeReadyBssids.clear();
+        xSemaphoreGive(handshakeReadyMtx);
+    }
 }
 
 static bool handshakeRecordExists(const String &path) {
@@ -1203,7 +1217,7 @@ void sniffer_setup() {
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
-    wifi_config_t wifi_config;
+    wifi_config_t wifi_config{};
     strlcpy((char *)wifi_config.ap.ssid, "BruceSniffer", sizeof(wifi_config.ap.ssid));
     strlcpy((char *)wifi_config.ap.password, "brucenet", sizeof(wifi_config.ap.password));
     wifi_config.ap.ssid_len = strlen("BruceSniffer");
@@ -1219,7 +1233,7 @@ void sniffer_setup() {
     ESP_ERROR_CHECK(esp_wifi_start());
     esp_wifi_set_promiscuous(true);
     esp_wifi_set_promiscuous_rx_cb(sniffer);
-    wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
+    wifi_second_chan_t secondCh = WIFI_SECOND_CHAN_NONE;
     esp_wifi_set_channel(all_wifi_channels[ch], secondCh);
 
     Serial.println("Sniffer started!");
@@ -1264,7 +1278,7 @@ void sniffer_setup() {
             esp_wifi_set_promiscuous_rx_cb(nullptr);
             ch++; // increase channel
             if (ch >= sizeof(all_wifi_channels)) ch = 0;
-            wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
+            wifi_second_chan_t secondCh = WIFI_SECOND_CHAN_NONE;
             esp_wifi_set_channel(all_wifi_channels[ch], secondCh);
             redraw = true;
             vTaskDelay(50 / portTICK_RATE_MS);
@@ -1292,7 +1306,7 @@ void sniffer_setup() {
             }
             if (millis() - _tmp > 700) { // longpress detected to exit
                 returnToMenu = true;
-                _pcap_file.close();
+                closeRawFile();
                 break;
             }
 #endif
@@ -1302,7 +1316,7 @@ void sniffer_setup() {
 
             if (ch == 0) ch = sizeof(all_wifi_channels) - 1;
             else ch--; // decrease channel
-            wifi_second_chan_t secondCh = (wifi_second_chan_t)NULL;
+            wifi_second_chan_t secondCh = WIFI_SECOND_CHAN_NONE;
             esp_wifi_set_channel(all_wifi_channels[ch], secondCh);
             redraw = true;
             vTaskDelay(50 / portTICK_PERIOD_MS);
@@ -1314,7 +1328,7 @@ void sniffer_setup() {
         // T-Embed has a different btn for Escape, different from StickCs that uses Previous btn
         if (check(EscPress)) {
             returnToMenu = true;
-            _pcap_file.close();
+            closeRawFile();
             break;
         }
 #endif

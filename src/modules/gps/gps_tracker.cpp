@@ -271,7 +271,7 @@ void GPSTracker::restorePins() {
                 bruceConfigPins.gps_bus.rx == bruceConfigPins.NRF24_bus.cs ||
 #if !defined(LITE_VERSION)
                 bruceConfigPins.gps_bus.rx == bruceConfigPins.W5500_bus.cs ||
-                bruceConfigPins.gps_bus.rx == bruceConfigPins.W5500_bus.cs ||
+                bruceConfigPins.gps_bus.rx == bruceConfigPins.LoRa_bus.cs ||
 #endif
                 bruceConfigPins.gps_bus.rx == bruceConfigPins.SDCARD_bus.cs) {
                 // If it is conflicting to an SPI CS pin, keep it HIGH

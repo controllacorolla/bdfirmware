@@ -111,8 +111,8 @@ void interpreterHandler(void *pvParameters) {
     printMemoryUsage("deinit interpreter");
 
     interpreter_state = -1;
+    interpreterTaskHandler = NULL;
     vTaskDelete(NULL);
-    return;
 }
 
 void startInterpreterTask() {

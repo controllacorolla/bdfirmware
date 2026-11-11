@@ -690,7 +690,7 @@ void Pn532ble::hf14aMfuWriteDumpMode() {
             }
             area.scrollDown();
             area.draw();
-            block += 4;
+            block++;
         }
         area.addLine("------------");
         area.scrollDown();

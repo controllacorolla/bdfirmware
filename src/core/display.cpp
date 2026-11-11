@@ -1515,10 +1515,11 @@ void *Gif::openFile(const char *fname, int32_t *pSize) {
 
     File *FSGifFile = new File(GifFile);
 
-    if (FSGifFile) {
+    if (FSGifFile && *FSGifFile) {
         *pSize = FSGifFile->size();
         return (void *)FSGifFile;
     }
+    delete FSGifFile;
     return NULL;
 }
 
@@ -1835,6 +1836,7 @@ bool drawBmp(FS &fs, const String &filename, int x, int y, bool center) {
             tft.setSwapBytes(true);
             bmpFS.seek(seekOffset);
 
+            if (w == 0 || w > tftWidth) { bmpFS.close(); return false; }
             uint16_t padding = (4 - ((w * 3) & 3)) & 3;
             uint8_t lineBuffer[w * 3 + padding];
 
