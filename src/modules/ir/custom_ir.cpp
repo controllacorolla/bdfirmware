@@ -617,6 +617,10 @@ void sendRawCommand(uint16_t frequency, String rawData, bool hideDefaultUI) {
         if (rawData[i] == ' ') dataBufferSize += 1;
     }
     uint16_t *dataBuffer = (uint16_t *)malloc((dataBufferSize) * sizeof(uint16_t));
+    if (dataBuffer == nullptr) {
+        Serial.println("IR raw buffer alloc failed");
+        return;
+    }
 
     uint16_t count = 0;
     // Parse raw data string

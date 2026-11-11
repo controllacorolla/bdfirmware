@@ -35,7 +35,7 @@ public:
     uint32_t getMaxVisibleTextLength();
 
     size_t firstVisibleLine;
-    size_t lastVisibleLine;
+    size_t lastVisibleLine = 0;
     /// TODO: Change to std::vector<char *> and alloc to PSRAM if possible
     std::vector<String> linesBuffer;
 
@@ -48,7 +48,7 @@ private:
     int32_t _pixelsPerLine;
     size_t _maxVisibleLines;
     uint16_t _maxCharactersPerLine;
-    bool _indentWrappedLines;
+    bool _indentWrappedLines = false;
 
     void setup();
 

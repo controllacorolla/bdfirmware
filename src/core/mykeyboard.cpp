@@ -211,14 +211,14 @@ char numpad_keyset[numpad_keyboard_height][numpad_keyboard_width][2] = {
 
 #if defined(HAS_TOUCH)
 struct box_t {
-    int x;
-    int y;
-    int w;
-    int h;
-    std::uint16_t color;
+    int x = 0;
+    int y = 0;
+    int w = 0;
+    int h = 0;
+    std::uint16_t color = 0;
     int touch_id = -1;
-    char key;
-    char key_sh;
+    char key = 0;
+    char key_sh = 0;
 
     void clear(void) {
         for (int i = 0; i < 8; ++i) { tft.fillRect(x, y, w, h, bruceConfig.bgColor); }

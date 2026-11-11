@@ -991,6 +991,13 @@ void Pn532ble::hf15WriteDumpMode() {
             return;
         }
 
+        // Ensure the dump actually holds blockSize*4 bytes before indexing it;
+        // otherwise the loop below reads past the end of an empty/short vector.
+        if (iso15dump.size() < (size_t)tagInfo.blockSize * 4) {
+            displayError("No dump loaded");
+            return;
+        }
+
         for (uint8_t i = 0; i < tagInfo.blockSize; i++) {
             std::vector<uint8_t> data(iso15dump.begin() + i * 4, iso15dump.begin() + i * 4 + 4);
             bool writeResult = pn532_ble.hf15Wrbl(i, data);

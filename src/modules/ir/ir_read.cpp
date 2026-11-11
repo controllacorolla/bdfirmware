@@ -26,7 +26,7 @@ String uint32ToString(uint32_t value) {
     snprintf(
         buffer,
         sizeof(buffer),
-        "%02lX %02lX %02lX %02lX",
+        "%02X %02X %02X %02X",
         value & 0xFF,
         (value >> 8) & 0xFF,
         (value >> 16) & 0xFF,
@@ -40,7 +40,7 @@ String uint32ToStringInverted(uint32_t value) {
     snprintf(
         buffer,
         sizeof(buffer),
-        "%02lX %02lX %02lX %02lX",
+        "%02X %02X %02X %02X",
         (value >> 24) & 0xFF,
         (value >> 16) & 0xFF,
         (value >> 8) & 0xFF,
