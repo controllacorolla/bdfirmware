@@ -50,6 +50,7 @@ struct AudioPlayerState {
     unsigned long startTime;
     unsigned long pausedTime;
     unsigned long totalPausedDuration;
+    unsigned long estimatedDuration;
 
     // Task handle
     TaskHandle_t taskHandle;
@@ -60,7 +61,7 @@ struct AudioPlayerState {
     AudioPlayerState()
         : generator(nullptr), source(nullptr), output(nullptr), state(PLAYBACK_IDLE), mode(PLAYBACK_BLOCKING),
           currentFile(""), stopRequested(false), pauseRequested(false), volumeChanged(false), newVolume(0),
-          currentGain(1.0f), startTime(0), pausedTime(0), totalPausedDuration(0), taskHandle(nullptr),
+          currentGain(1.0f), startTime(0), pausedTime(0), totalPausedDuration(0), estimatedDuration(0), taskHandle(nullptr),
           mutex(nullptr) {
         mutex = xSemaphoreCreateMutex();
     }
@@ -133,6 +134,56 @@ static AudioOutputI2S *createConfiguredAudioOutput() {
     audioout->SetGain(bruceConfig.soundVolume / AUDIO_VOLUME_MAX);
 
     return audioout;
+}
+
+static unsigned long estimateAudioDuration(FS *fs, const String &filepath, size_t fileSize) {
+    File f = fs->open(filepath.c_str(), "r");
+    if (!f) return 0;
+
+    String lpath = filepath;
+    lpath.toLowerCase();
+
+    if (lpath.endsWith(".wav")) {
+        uint8_t hdr[44];
+        if (f.read(hdr, 44) != 44) { f.close(); return 0; }
+        if (hdr[0] != 'R' || hdr[1] != 'I' || hdr[2] != 'F' || hdr[3] != 'F') { f.close(); return 0; }
+        uint16_t channels = hdr[22] | (hdr[23] << 8);
+        uint32_t sampleRate = hdr[24] | (hdr[25] << 8) | (hdr[26] << 16) | (hdr[27] << 24);
+        uint16_t bitsPerSample = hdr[34] | (hdr[35] << 8);
+        f.close();
+        if (sampleRate == 0 || channels == 0 || bitsPerSample == 0) return 0;
+        uint32_t bytesPerSec = sampleRate * channels * (bitsPerSample / 8);
+        if (bytesPerSec == 0) return 0;
+        size_t dataSize = (fileSize > 44) ? fileSize - 44 : 0;
+        return (unsigned long)(dataSize * 1000ULL / bytesPerSec);
+    }
+
+    if (lpath.endsWith(".mp3")) {
+        uint8_t buf[4];
+        uint32_t bitrate = 128000;
+        for (int attempt = 0; attempt < 8192 && f.available() >= 4; attempt++) {
+            if (f.read(buf, 1) != 1) break;
+            if (buf[0] == 0xFF) {
+                if (f.read(buf + 1, 3) != 3) break;
+                if ((buf[1] & 0xE0) == 0xE0) {
+                    static const uint32_t mp3_bitrates[16] = {
+                        0, 32000, 40000, 48000, 56000, 64000, 80000, 96000,
+                        112000, 128000, 160000, 192000, 224000, 256000, 320000, 0
+                    };
+                    uint8_t brIdx = (buf[2] >> 4) & 0x0F;
+                    if (brIdx > 0 && brIdx < 15) bitrate = mp3_bitrates[brIdx];
+                    break;
+                }
+                f.seek(f.position() - 3);
+            }
+        }
+        f.close();
+        if (bitrate == 0) return 0;
+        return (unsigned long)(fileSize * 8000ULL / bitrate);
+    }
+
+    f.close();
+    return 0;
 }
 
 // Helper to validate file existence
@@ -359,6 +410,7 @@ AudioPlaybackInfo getAudioPlaybackInfo() {
         info.currentFile = g_audioPlayer->currentFile;
         info.volume = bruceConfig.soundVolume;
         info.isAsyncMode = (g_audioPlayer->mode == PLAYBACK_ASYNC);
+        info.duration = g_audioPlayer->estimatedDuration;
 
         // Calculate position
         if (g_audioPlayer->state == PLAYBACK_PLAYING) {
@@ -391,7 +443,8 @@ void setAudioPlaybackVolume(uint8_t volume) {
 
 // ===== HELPER: Start async playback task =====
 static bool startAsyncPlayback(
-    AudioGenerator *generator, AudioFileSource *source, AudioOutputI2S *output, const String &filename
+    AudioGenerator *generator, AudioFileSource *source, AudioOutputI2S *output, const String &filename,
+    unsigned long estDuration = 0
 ) {
     initAudioPlayer();
 
@@ -418,6 +471,7 @@ static bool startAsyncPlayback(
     g_audioPlayer->startTime = millis();
     g_audioPlayer->pausedTime = 0;
     g_audioPlayer->totalPausedDuration = 0;
+    g_audioPlayer->estimatedDuration = estDuration;
 
     g_audioPlayer->unlock();
 
@@ -456,6 +510,11 @@ bool playAudioFile(FS *fs, String filepath, PlaybackMode mode) {
     if (!bruceConfig.soundEnabled) return false;
 
     if (!validateAudioFile(fs, filepath)) { return false; }
+
+    File szFile = fs->open(filepath.c_str(), "r");
+    size_t fileSize = szFile ? szFile.size() : 0;
+    if (szFile) szFile.close();
+    unsigned long estDuration = estimateAudioDuration(fs, filepath, fileSize);
 
     // Stop any current playback
     if (isAudioPlaying()) { stopAudioPlayback(); }
@@ -530,7 +589,7 @@ bool playAudioFile(FS *fs, String filepath, PlaybackMode mode) {
 
     // === ASYNC MODE ===
     Serial.println("Start audio (async)");
-    return startAsyncPlayback(generator, source, audioout, filepath);
+    return startAsyncPlayback(generator, source, audioout, filepath, estDuration);
 }
 
 bool playAudioRTTTLString(String song, PlaybackMode mode) {

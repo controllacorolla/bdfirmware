@@ -6,6 +6,9 @@
 #include "core/mykeyboard.h"
 #include "globals.h"
 #include <USB.h>
+#if defined(CONFIG_BT_ENABLED)
+#include <BleKeyboard.h>
+#endif
 
 #ifdef USB_as_HID
 #include <USBHIDMouse.h>
@@ -885,18 +888,109 @@ void usbClickerSetup() { clicker_setup(); }
  * Will require BLE HID library and pairing logic
  */
 void bleClickerSetup() {
+#if defined(CONFIG_BT_ENABLED)
+    BleKeyboard *bleKb = new BleKeyboard("Bruce Clicker", "BruceFW", 100);
+    bleKb->begin();
+
+    tft.fillScreen(bruceConfig.bgColor);
+    tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+    tft.setTextSize(2);
+
+    // Wait for BLE connection
+    unsigned long waitStart = millis();
+    while (!bleKb->isConnected()) {
+        tft.fillScreen(bruceConfig.bgColor);
+        tft.setCursor(10, tftHeight / 2 - 16);
+        tft.print("BLE Clicker");
+        tft.setTextSize(1);
+        tft.setCursor(10, tftHeight / 2 + 8);
+        tft.print("Pair 'Bruce Clicker'...");
+        tft.setTextSize(2);
+
+        if (check(EscPress)) {
+            bleKb->end();
+            delete bleKb;
+            return;
+        }
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+
+    enum BleClickerMode { MODE_SLIDES = 0, MODE_MEDIA = 1 };
+    int mode = MODE_SLIDES;
+    bool redraw = true;
+
+    while (true) {
+        if (check(EscPress)) break;
+
+        if (redraw) {
+            tft.fillScreen(bruceConfig.bgColor);
+            tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
+            tft.setTextSize(2);
+            tft.setCursor(10, 5);
+            tft.print(mode == MODE_SLIDES ? "> Slides" : "  Slides");
+            tft.setCursor(10, 30);
+            tft.print(mode == MODE_MEDIA  ? "> Media"  : "  Media");
+
+            tft.setTextSize(1);
+            int y = tftHeight / 2 + 10;
+            if (mode == MODE_SLIDES) {
+                tft.setCursor(10, y);      tft.print("UP: Prev Slide");
+                tft.setCursor(10, y + 14); tft.print("DN: Next Slide");
+                tft.setCursor(10, y + 28); tft.print("OK: Toggle mode");
+            } else {
+                tft.setCursor(10, y);      tft.print("UP: Vol Up");
+                tft.setCursor(10, y + 14); tft.print("DN: Vol Down");
+                tft.setCursor(10, y + 28); tft.print("OK: Play/Pause");
+            }
+            tft.setCursor(10, tftHeight - 14);
+            tft.print(bleKb->isConnected() ? "Connected" : "Disconnected");
+            redraw = false;
+        }
+
+        if (check(SelPress)) {
+            if (mode == MODE_SLIDES) {
+                mode = MODE_MEDIA;
+            } else {
+                bleKb->write(KEY_MEDIA_PLAY_PAUSE);
+            }
+            redraw = true;
+        }
+        if (check(NextPress)) {
+            mode = MODE_SLIDES;
+            redraw = true;
+        }
+        if (check(PrevPress)) {
+            mode = MODE_MEDIA;
+            redraw = true;
+        }
+        if (check(UpPress)) {
+            if (mode == MODE_SLIDES) {
+                bleKb->write(KEY_PAGE_UP);
+            } else {
+                bleKb->write(KEY_MEDIA_VOLUME_UP);
+            }
+        }
+        if (check(DownPress)) {
+            if (mode == MODE_SLIDES) {
+                bleKb->write(KEY_PAGE_DOWN);
+            } else {
+                bleKb->write(KEY_MEDIA_VOLUME_DOWN);
+            }
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+
+    bleKb->end();
+    delete bleKb;
+#else
     tft.fillScreen(bruceConfig.bgColor);
     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
     tft.setTextSize(2);
     tft.setCursor(10, tftHeight / 2 - 8);
-    tft.print("BLE Mode");
-
-    tft.setTextSize(1);
-    tft.setCursor(10, tftHeight / 2 + 20);
-    tft.print("Not yet implemented");
-
+    tft.print("BLE not available");
     delay(2000);
-    // Serial.println("[CLICKER] BLE mode requested but not implemented");
+#endif
 }
 
 #endif // USB_as_HID

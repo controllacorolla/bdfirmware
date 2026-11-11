@@ -42,6 +42,13 @@ static const RfProtocolDef rf_protocols[] = {
     {"Holtek_HT12",   450, {23, 1},   {1, 2},   {2, 1},   12, true,  SYNC | FIXED},   // legacy proto 6 (HT6P20B)
     {"PhoenixV2",     427, {60, 6},   {1, 2},   {2, 1},   52, true,  SYNC | FIXED},
 
+    // ---- Flipper-sourced protocols (timing from flipperzero-firmware) ----
+    {"SMC5326",       300, {1, 24},   {1, 3},   {3, 1},   25, false, SYNC | FIXED},   // Asian gates
+    {"Honeywell_WDB", 160, {0, 3},    {1, 2},   {2, 1},   48, false, FIXED},          // security sensors, low header
+    {"Nero_Sketch",   330, {4, 1},    {1, 2},   {2, 1},   40, false, SYNC | FIXED},   // Nero gates/blinds
+    {"Linear_Delta3", 500, {1, 70},   {4, 4},   {1, 7},   8,  false, SYNC | FIXED},   // Linear DT/DTC 8-bit DIP
+    {"BETT",          340, {1, 44},   {1, 6},   {6, 1},   18, false, SYNC | FIXED},   // BETTini gates
+
     // ---- Generic numbered protocols (classic legacy proto 1..12) -------
     {"RcSwitch_1",    350, {1, 31},   {1, 3},   {3, 1},   0,  false, SYNC},
     {"RcSwitch_2",    650, {1, 10},   {1, 2},   {2, 1},   0,  false, SYNC},
@@ -76,6 +83,14 @@ static const RfProtoAlias rf_proto_aliases[] = {
     {"Holtec 12bit", "Holtek_12bit"},
     {"Holtek_HT12X", "Holtek_HT12"},
     {"Phoenix_V2", "PhoenixV2"},
+    {"SMC5326", "SMC5326"},
+    {"Honeywell WDB", "Honeywell_WDB"},
+    {"HoneywellWDB", "Honeywell_WDB"},
+    {"Nero Sketch", "Nero_Sketch"},
+    {"NeroSketch", "Nero_Sketch"},
+    {"Linear Delta3", "Linear_Delta3"},
+    {"LinearDelta3", "Linear_Delta3"},
+    {"BETT", "BETT"},
 };
 
 const RfProtocolDef *rf_find_protocol(const String &name) {

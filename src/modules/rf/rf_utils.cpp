@@ -2,6 +2,7 @@
 #include "core/bus_HAL.h"
 #include "core/sd_functions.h"
 #include "core/settings.h"
+#include <Preferences.h>
 
 // CRC-64-ECMA constants
 const uint64_t CRC64_ECMA_POLY = 0x42F0E1EBA9EA3693; // Polynomial for CRC-64-ECMA
@@ -167,13 +168,52 @@ void cc1101ApplyFixedFreqOokPreset(bool isTx) {
     }
 }
 
-// Circular buffer (FIFO eviction) of the last RF signals sent/scanned, capped at
-// RECENT_RFCODES_MAX so it survives navigating back to the Main menu (unlike the
-// previous refcounted alloc-on-enter/free-on-exit scheme). An empty std::vector
-// costs only the container header, so this stays cheap when RF is unused.
-// TODO: save/load in EEPROM.
 static constexpr size_t RECENT_RFCODES_MAX = 15;
 std::vector<RfCodes> recent_rfcodes;
+static bool rfcodes_loaded = false;
+
+static void saveRecentRfCodes() {
+    Preferences prefs;
+    if (!prefs.begin("rfcodes", false)) return;
+    prefs.putUInt("count", recent_rfcodes.size());
+    for (size_t i = 0; i < recent_rfcodes.size(); i++) {
+        String pfx = String(i) + "_";
+        prefs.putString((pfx + "fp").c_str(), recent_rfcodes[i].filepath);
+        prefs.putUInt((pfx + "freq").c_str(), recent_rfcodes[i].frequency);
+        prefs.putString((pfx + "proto").c_str(), recent_rfcodes[i].protocol);
+        prefs.putString((pfx + "preset").c_str(), recent_rfcodes[i].preset);
+        prefs.putString((pfx + "data").c_str(), recent_rfcodes[i].data);
+        prefs.putULong64((pfx + "key").c_str(), recent_rfcodes[i].key);
+        prefs.putInt((pfx + "te").c_str(), recent_rfcodes[i].te);
+        prefs.putInt((pfx + "bit").c_str(), recent_rfcodes[i].Bit);
+        prefs.putInt((pfx + "bitr").c_str(), recent_rfcodes[i].BitRAW);
+    }
+    prefs.end();
+}
+
+static void loadRecentRfCodes() {
+    if (rfcodes_loaded) return;
+    rfcodes_loaded = true;
+    Preferences prefs;
+    if (!prefs.begin("rfcodes", true)) return;
+    size_t count = prefs.getUInt("count", 0);
+    if (count > RECENT_RFCODES_MAX) count = RECENT_RFCODES_MAX;
+    for (size_t i = 0; i < count; i++) {
+        String pfx = String(i) + "_";
+        RfCodes code;
+        code.filepath = prefs.getString((pfx + "fp").c_str(), "");
+        code.frequency = prefs.getUInt((pfx + "freq").c_str(), 0);
+        code.protocol = prefs.getString((pfx + "proto").c_str(), "");
+        code.preset = prefs.getString((pfx + "preset").c_str(), "");
+        code.data = prefs.getString((pfx + "data").c_str(), "");
+        code.key = prefs.getULong64((pfx + "key").c_str(), 0);
+        code.te = prefs.getInt((pfx + "te").c_str(), 0);
+        code.Bit = prefs.getInt((pfx + "bit").c_str(), 0);
+        code.BitRAW = prefs.getInt((pfx + "bitr").c_str(), 0);
+        if (code.filepath.length() > 0) recent_rfcodes.push_back(code);
+    }
+    prefs.end();
+}
 
 bool rmtInstalled = true;
 static bool cc1101_spi_ready = false;
@@ -485,13 +525,16 @@ uint64_t crc64_ecma(const std::vector<int> &data) {
 }
 
 void addToRecentCodes(struct RfCodes rfcode) {
+    loadRecentRfCodes();
     recent_rfcodes.push_back(rfcode);
     if (recent_rfcodes.size() > RECENT_RFCODES_MAX) {
-        recent_rfcodes.erase(recent_rfcodes.begin()); // evict oldest
+        recent_rfcodes.erase(recent_rfcodes.begin());
     }
+    saveRecentRfCodes();
 }
 
 struct RfCodes selectRecentRfMenu() {
+    loadRecentRfCodes();
     options = {};
     struct RfCodes selected_code;
 
@@ -503,7 +546,11 @@ struct RfCodes selectRecentRfMenu() {
         });
     }
     if (!recent_rfcodes.empty()) {
-        options.emplace_back("Clear Recent", []() { recent_rfcodes.clear(); });
+        options.emplace_back("Clear Recent", []() {
+            recent_rfcodes.clear();
+            Preferences prefs;
+            if (prefs.begin("rfcodes", false)) { prefs.clear(); prefs.end(); }
+        });
     }
     options.emplace_back("Main Menu", []() {});
 

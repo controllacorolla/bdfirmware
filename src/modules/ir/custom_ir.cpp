@@ -8,6 +8,42 @@
 #include "ir_utils.h"
 #include <IRutils.h>
 
+static String mapFlipperIrProtocol(const String &proto) {
+    struct Alias { const char *flipper; const char *irremote; };
+    static const Alias aliases[] = {
+        {"NECext",     "NEC"},
+        {"Samsung32",  "SAMSUNG"},
+        {"Kaseikyo",   "PANASONIC"},
+        {"SIRC",       "SONY"},
+        {"SIRC15",     "SONY"},
+        {"SIRC20",     "SONY"},
+        {"RC5X",       "RC5X"},
+        {"RCA",        "RCA"},
+        {"Pioneer",    "PIONEER"},
+        {"NEC42",      "NEC42"},
+        {"NEC42ext",   "NEC42"},
+        {"NECf16",     "NEC"},
+        {"Samsung36",  "SAMSUNG36"},
+        {"SamsungAC",  "SAMSUNG_AC"},
+        {"LG",         "LG"},
+        {"LG32",       "LG2"},
+        {"Panasonic",  "PANASONIC"},
+        {"PanasonicAC","PANASONIC_AC"},
+        {"Sharp",      "SHARP"},
+        {"JVC",        "JVC"},
+        {"Denon",      "DENON"},
+        {"Toshiba",    "TOSHIBA_AC"},
+        {"Fujitsu",    "FUJITSU_AC"},
+        {"Daikin",     "DAIKIN"},
+        {"Mitsubishi", "MITSUBISHI_AC"},
+        {"MilesTag",   "MILESTAG2"},
+    };
+    for (const auto &a : aliases) {
+        if (proto.equalsIgnoreCase(a.flipper)) return String(a.irremote);
+    }
+    return proto;
+}
+
 uint32_t swap32(uint32_t value) {
     return ((value & 0x000000FF) << 24) | ((value & 0x0000FF00) << 8) | ((value & 0x00FF0000) >> 8) |
            ((value & 0xFF000000) >> 24);
@@ -329,12 +365,11 @@ void sendIRCommand(IRCode *code, bool hideDefaultUI) {
         sendSonyCommand(code->address, code->command, 20, hideDefaultUI);
     else if (code->protocol.equalsIgnoreCase("Kaseikyo"))
         sendKaseikyoCommand(code->address, code->command, hideDefaultUI);
-    // Others protocols of IRRemoteESP8266, not related to Flipper Zero IR File Format
-    else if (
-        code->protocol != "" && code->data != "" &&
-        strToDecodeType(code->protocol.c_str()) != decode_type_t::UNKNOWN
-    )
-        sendDecodedCommand(code->protocol, code->data, code->bits, hideDefaultUI);
+    else if (code->protocol != "" && code->data != "") {
+        String mapped = mapFlipperIrProtocol(code->protocol);
+        if (strToDecodeType(mapped.c_str()) != decode_type_t::UNKNOWN)
+            sendDecodedCommand(mapped, code->data, code->bits, hideDefaultUI);
+    }
 }
 
 void sendNECCommand(String address, String command, bool hideDefaultUI) {
