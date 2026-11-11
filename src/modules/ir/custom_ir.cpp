@@ -558,8 +558,11 @@ bool sendDecodedCommand(String protocol, String value, uint8_t bits, bool hideDe
     if (hasACState(type)) {
         // need to send the state (still passed from value)
         uint8_t state[bits / 8] = {0};
+        const uint16_t state_cap = bits / 8;
         uint16_t state_pos = 0;
-        for (uint16_t i = 0; i < value.length(); i += 3) {
+        // Bound the write to the state[] capacity: a malformed .ir file can carry a
+        // `value` string far longer than `bits` implies, which would overflow the VLA.
+        for (uint16_t i = 0; i < value.length() && state_pos < state_cap; i += 3) {
             // parse  value -> state
             uint8_t highNibble = hexCharToDecimal(value[i]);
             uint8_t lowNibble = hexCharToDecimal(value[i + 1]);
@@ -617,6 +620,10 @@ void sendRawCommand(uint16_t frequency, String rawData, bool hideDefaultUI) {
         if (rawData[i] == ' ') dataBufferSize += 1;
     }
     uint16_t *dataBuffer = (uint16_t *)malloc((dataBufferSize) * sizeof(uint16_t));
+    if (!dataBuffer) {
+        digitalWrite(bruceConfigPins.irTx, LED_OFF);
+        return;
+    }
 
     uint16_t count = 0;
     // Parse raw data string

@@ -202,8 +202,8 @@ void fm_spectrum() {
                 // Draw waveform based on signal strength
                 for (size_t i = 0; i < noise_level; i++) {
                     int lineHeight = map(noise_level, 0, SIGNAL_STRENGTH_THRESHOLD, 0, tftHeight / 2);
-                    int lineX =
-                        map(i, 0, noise_level - 1, 0, tftWidth - 1); // Map i to within the display width
+                    // Avoid map() dividing by (noise_level-1)==0 when noise_level == 1
+                    int lineX = (noise_level > 1) ? map(i, 0, noise_level - 1, 0, tftWidth - 1) : 0;
                     // Ensure drawing coordinates stay within the box bounds
                     int startY = constrain(20 + tftHeight / 2 - lineHeight / 2, 20, 20 + tftHeight);
                     int endY = constrain(20 + tftHeight / 2 + lineHeight / 2, 20, 20 + tftHeight);

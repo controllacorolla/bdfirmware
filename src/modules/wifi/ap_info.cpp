@@ -87,6 +87,7 @@ void fillInfo(ScrollableTextArea &area) {
 
         while (check(SelPress)) { vTaskDelay(pdMS_TO_TICKS(1)); }
         while (!check(SelPress)) { vTaskDelay(pdMS_TO_TICKS(1)); }
+        return; // ap_info is uninitialized on failure; don't fall through and read it
     }
 
     const auto mac = MAC(ap_info.bssid);

@@ -330,7 +330,8 @@ void RFID2::parse_data() {
     strUID.trim();
     strUID.replace(" ", "");
     uid.size = strUID.length() / 2;
-    for (size_t i = 0; i < strUID.length(); i += 2) {
+    if (uid.size > sizeof(uid.uidByte)) uid.size = sizeof(uid.uidByte);
+    for (size_t i = 0; i < strUID.length() && i / 2 < sizeof(uid.uidByte); i += 2) {
         uid.uidByte[i / 2] = strtoul(strUID.substring(i, i + 2).c_str(), NULL, 16);
     }
 

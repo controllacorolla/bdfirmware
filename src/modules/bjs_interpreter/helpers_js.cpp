@@ -29,7 +29,8 @@ void js_fatal_error_handler(JSContext *ctx) {
     obj = JS_GetException(ctx);
 
     JSValue jsvMessage = JS_GetPropertyStr(ctx, obj, "message");
-    if (strcmp(JS_ToCString(ctx, jsvMessage, &sb), "Script exited") == 0) { return; }
+    const char *emsg = JS_ToCString(ctx, jsvMessage, &sb);
+    if (emsg && strcmp(emsg, "Script exited") == 0) { return; }
 
     tft.fillScreen(bruceConfig.bgColor);
     tft.setTextSize(FM);

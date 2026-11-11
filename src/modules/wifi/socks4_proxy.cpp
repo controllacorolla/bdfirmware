@@ -101,7 +101,7 @@ void socks4Proxy(uint16_t port) {
     Serial.println("[SOCKS4] Listening on " + WiFi.localIP().toString() + ":" + String(port));
 
     char hostname[256];
-    uint8_t dstIp[4];
+    uint8_t dstIp[4] = {0};
     uint8_t cd;
     uint16_t dstPort;
     int connCount = 0;

@@ -18,6 +18,7 @@ JSValue js_load(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
 
     size_t script_len = 0;
     char *script = readBigFile(fileParams.fs, fileParams.path, false, &script_len);
+    if (!script) return JS_ThrowTypeError(ctx, "load: cannot read %s", filename);
 
     JSValue ret = JS_Eval(ctx, (const char *)script, script_len, filename, 0);
     free(script);

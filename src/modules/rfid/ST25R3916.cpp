@@ -307,6 +307,7 @@ String ST25R3916::_getNfcaTypeName(uint8_t sak) {
 
 void ST25R3916::_parseDevice(rfalNfcDevice *dev) {
     uid.size = dev->nfcidLen;
+    if (uid.size > sizeof(uid.uidByte)) uid.size = sizeof(uid.uidByte); // clamp hw-supplied length
     memcpy(uid.uidByte, dev->nfcid, uid.size);
 
     printableUID.uid = "";
@@ -2990,8 +2991,9 @@ bool ST25R3916::_emuMfcHandle(uint8_t *fifo, uint16_t n) {
         if (c == 0x30 && cnt >= 2) { // READ block
             uint8_t blk = dec[1];
             uint8_t plain[18];
-            memcpy(plain, (blk < mfcDump.totalBlocks) ? mfcDump.blocks[blk] : ffKey, 16);
-            if (blk >= mfcDump.totalBlocks) memset(plain, 0, 16);
+            // Never memcpy 16 bytes from the 6-byte ffKey; out-of-range blocks are zeroed.
+            if (blk < mfcDump.totalBlocks) memcpy(plain, mfcDump.blocks[blk], 16);
+            else memset(plain, 0, 16);
             uint16_t crc = _hw->rfalCrcCalculateCcitt(0x6363, plain, 16);
             plain[16] = (uint8_t)(crc & 0xFF);
             plain[17] = (uint8_t)(crc >> 8);

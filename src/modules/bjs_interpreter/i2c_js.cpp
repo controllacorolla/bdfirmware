@@ -8,11 +8,15 @@
 // re-runs i2c.begin() with different pins (or a fresh interpreter run acquires it again).
 static TwoWire *jsI2CBus = nullptr;
 
-static void i2c_require_ready(JSContext *ctx) {
+static bool i2c_require_ready(JSContext *ctx) {
     JSValue global = JS_GetGlobalObject(ctx);
     JSValue v = JS_GetPropertyStr(ctx, global, "\xffi2c_ready");
     bool ready = JS_IsBool(v) ? JS_ToBool(ctx, v) : false;
-    if (!ready) JS_ThrowInternalError(ctx, "i2c not initialized: call i2c.begin(sda,scl,hz) first");
+    if (!ready || !jsI2CBus) {
+        JS_ThrowInternalError(ctx, "i2c not initialized: call i2c.begin(sda,scl,hz) first");
+        return false;
+    }
+    return true;
 }
 
 JSValue native_i2c_begin(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
@@ -28,6 +32,7 @@ JSValue native_i2c_begin(JSContext *ctx, JSValue *this_val, int argc, JSValue *a
     if (hz < 1000 || hz > 1000000) return JS_ThrowRangeError(ctx, "i2c.begin: hz must be 1k..1MHz");
 
     jsI2CBus = acquireI2CBus((int8_t)sda, (int8_t)scl);
+    if (!jsI2CBus) return JS_ThrowInternalError(ctx, "i2c.begin: bus unavailable");
     jsI2CBus->setClock(hz);
     jsI2CBus->setTimeOut(50);
 
@@ -37,7 +42,7 @@ JSValue native_i2c_begin(JSContext *ctx, JSValue *this_val, int argc, JSValue *a
 }
 
 JSValue native_i2c_scan(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
-    i2c_require_ready(ctx);
+    if (!i2c_require_ready(ctx)) return JS_EXCEPTION;
     JSValue arr = JS_NewArray(ctx, 127);
     uint32_t idx = 0;
     for (uint8_t a = 1; a < 127; a++) {
@@ -48,7 +53,7 @@ JSValue native_i2c_scan(JSContext *ctx, JSValue *this_val, int argc, JSValue *ar
 }
 
 JSValue native_i2c_write(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
-    i2c_require_ready(ctx);
+    if (!i2c_require_ready(ctx)) return JS_EXCEPTION;
     int addr = 0;
     if (argc > 0 && JS_IsNumber(ctx, argv[0])) JS_ToInt32(ctx, &addr, argv[0]);
     std::vector<uint8_t> tmp;
@@ -79,7 +84,7 @@ JSValue native_i2c_write(JSContext *ctx, JSValue *this_val, int argc, JSValue *a
 }
 
 JSValue native_i2c_read(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
-    i2c_require_ready(ctx);
+    if (!i2c_require_ready(ctx)) return JS_EXCEPTION;
     int addr = 0;
     int len = 0;
     if (argc > 0 && JS_IsNumber(ctx, argv[0])) JS_ToInt32(ctx, &addr, argv[0]);
@@ -94,7 +99,7 @@ JSValue native_i2c_read(JSContext *ctx, JSValue *this_val, int argc, JSValue *ar
 }
 
 JSValue native_i2c_write_read(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
-    i2c_require_ready(ctx);
+    if (!i2c_require_ready(ctx)) return JS_EXCEPTION;
     int addr = 0;
     if (argc > 0 && JS_IsNumber(ctx, argv[0])) JS_ToInt32(ctx, &addr, argv[0]);
     std::vector<uint8_t> tmp;

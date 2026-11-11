@@ -502,7 +502,7 @@ void Pn532ble::hf14aMfReadDumpMode() {
                     uint8_t blockIndex = sectorBlockIdex + i;
                     uint8_t blockData[16];
                     std::vector<uint8_t> res = pn532_ble.mfRdbl(blockIndex);
-                    if (res.size() < 16) {
+                    if (res.size() < 17) { // need res[1..16] below
                         area.addLine("Sector " + String(s) + " Block " + String(blockIndex) + " read failed");
                         area.scrollDown();
                         area.draw();
@@ -680,7 +680,7 @@ void Pn532ble::hf14aMfuWriteDumpMode() {
             return;
         }
 
-        for (int i = 0; i < mfud.size(); i += 4) {
+        for (int i = 0; i + 4 <= (int)mfud.size(); i += 4) {
             std::vector<uint8_t> data(mfud.begin() + i, mfud.begin() + i + 4);
             bool res = pn532_ble.mfuWrbl(block, data);
             if (res) {
@@ -930,7 +930,7 @@ void Pn532ble::hf15ReadDumpMode() {
         area.draw();
         for (uint8_t i = 0; i < tagInfo.blockSize; i++) {
             std::vector<uint8_t> res = pn532_ble.hf15Rdbl(i);
-            if (res.size() < 4) {
+            if (res.size() < 5) { // need res[1..4] below
                 displayError("Read failed");
                 return;
             }
@@ -992,6 +992,7 @@ void Pn532ble::hf15WriteDumpMode() {
         }
 
         for (uint8_t i = 0; i < tagInfo.blockSize; i++) {
+            if ((size_t)(i * 4 + 4) > iso15dump.size()) break; // not enough data for this block
             std::vector<uint8_t> data(iso15dump.begin() + i * 4, iso15dump.begin() + i * 4 + 4);
             bool writeResult = pn532_ble.hf15Wrbl(i, data);
             if (writeResult) {
@@ -1267,7 +1268,7 @@ void Pn532ble::ntagEmulationMode() {
             continue;
         }
 
-        if (resp.size() < 5) {
+        if (resp.size() < 6) { // after erase() below, indices up to C_APDU_LC(4) are read
             delay(10);
             area.addLine("Invalid response");
             area.scrollDown();
@@ -1292,7 +1293,8 @@ void Pn532ble::ntagEmulationMode() {
                     wbuf = {
                         ApduCommand::R_APDU_SW1_COMMAND_COMPLETE, ApduCommand::R_APDU_SW2_COMMAND_COMPLETE
                     };
-                } else if (lc == 0x02 && resp[5] == 0xE1 && (resp[6] == 0x03 || resp[6] == 0x04)) {
+                } else if (lc == 0x02 && resp.size() >= 7 && resp[5] == 0xE1 &&
+                           (resp[6] == 0x03 || resp[6] == 0x04)) {
                     currentFile = (resp[6] == 0x03) ? TagFile::CC : TagFile::NDEF;
                     wbuf = {
                         ApduCommand::R_APDU_SW1_COMMAND_COMPLETE, ApduCommand::R_APDU_SW2_COMMAND_COMPLETE
@@ -1306,8 +1308,10 @@ void Pn532ble::ntagEmulationMode() {
                 area.addLine("Reader: Select by Name");
                 area.scrollDown();
                 area.draw();
-                std::vector<uint8_t> application(resp.begin() + 3, resp.begin() + 12);
-                if (std::equal(
+                std::vector<uint8_t> application;
+                if (resp.size() >= 12) { application.assign(resp.begin() + 3, resp.begin() + 12); }
+                if (application.size() == NdefCommand::APPLICATION_NAME_V2.size() &&
+                    std::equal(
                         application.begin(), application.end(), NdefCommand::APPLICATION_NAME_V2.begin()
                     )) {
                     wbuf = {
@@ -1358,11 +1362,15 @@ void Pn532ble::ntagEmulationMode() {
                     compatibilityContainer[11] = (NdefCommand::NDEF_MAX_LENGTH & 0xFF00) >> 8;
                     compatibilityContainer[12] = NdefCommand::NDEF_MAX_LENGTH & 0xFF;
                     compatibilityContainer[14] = 0xFF;
-                    wbuf.insert(
-                        wbuf.end(),
-                        compatibilityContainer.begin() + p1p2Length,
-                        compatibilityContainer.begin() + p1p2Length + lc
-                    );
+                    // Clamp the reader-controlled offset/length to the container bounds.
+                    if (p1p2Length < compatibilityContainer.size()) {
+                        size_t n = std::min<size_t>(lc, compatibilityContainer.size() - p1p2Length);
+                        wbuf.insert(
+                            wbuf.end(),
+                            compatibilityContainer.begin() + p1p2Length,
+                            compatibilityContainer.begin() + p1p2Length + n
+                        );
+                    }
                     wbuf.push_back(ApduCommand::R_APDU_SW1_COMMAND_COMPLETE);
                     wbuf.push_back(ApduCommand::R_APDU_SW2_COMMAND_COMPLETE);
                 }

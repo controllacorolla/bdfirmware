@@ -204,7 +204,7 @@ static bool parse_pcap_handshake(FS &fs, const String &path, HandshakeData &hs) 
         }
 
         if (frame_type == 0 && frame_sub == 8 && !have_beacon) {
-            String ssid = extract_ssid_from_beacon(pkt, incl_len);
+            String ssid = extract_ssid_from_beacon(pkt, read_sz);
             if (ssid.length() > 0) {
                 strncpy(hs.ssid, ssid.c_str(), sizeof(hs.ssid) - 1);
                 memcpy(hs.ap_mac, addr2, 6);
@@ -800,12 +800,12 @@ struct PwEntry {
 };
 
 struct CrackShared {
-    const HandshakeData *hs;
+    const HandshakeData *hs = nullptr;
     QueueHandle_t queue;
-    volatile bool found;
-    char found_pw[PW_MAX_LEN];
-    volatile uint32_t attempts;
-    volatile bool abort;
+    volatile bool found = false;
+    char found_pw[PW_MAX_LEN] = {};
+    volatile uint32_t attempts = 0;
+    volatile bool abort = false;
     SemaphoreHandle_t done_sem;
 };
 

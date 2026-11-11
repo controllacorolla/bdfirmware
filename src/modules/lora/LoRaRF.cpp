@@ -286,8 +286,8 @@ void upress() {
 
 void downpress() {
     Serial.println("Down Pressed");
-    if (scrollOffset < messages.size() - maxMessages) {
-        scrollOffset++;
+    if (messages.size() > (size_t)maxMessages && scrollOffset < (int)(messages.size() - maxMessages)) {
+        scrollOffset++; // guard the size()-maxMessages subtraction against unsigned underflow
         update = true;
     }
 }

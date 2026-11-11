@@ -97,6 +97,7 @@ void BruceConfigPins::fromJson(JsonObject obj) {
     }
     if (!root["rfScanRange"].isNull()) {
         rfScanRange = root["rfScanRange"].as<int>();
+        if (rfScanRange < 0 || rfScanRange > 3) rfScanRange = 3; // guard range_limits[4][2] indexing
     } else {
         count++;
         log_e("Fail");

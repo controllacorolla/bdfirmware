@@ -446,6 +446,10 @@ void sendRfCommand(struct RfCodes rfcode, bool hideDefaultUI) {
         // alloc buffer for transmittimings
         int *transmittimings =
             (int *)calloc(sizeof(int), buff_size + 1); // should be smaller the data.length()
+        if (!transmittimings) {
+            deinitRfModule();
+            return;
+        }
         size_t transmittimings_idx = 0;
 
         // split data into words, convert to int, and store them in transmittimings

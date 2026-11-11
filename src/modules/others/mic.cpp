@@ -239,8 +239,15 @@ void mic_test_one_task() {
 
     while (1) {
         fft_config_t *plan = fft_init(FFT_SIZE, FFT_REAL, FFT_FORWARD, NULL, NULL);
-        size_t bytesread;
-        i2s_channel_read(i2s_chan, (char *)i2s_buffer, FFT_SIZE * sizeof(int16_t), &bytesread, portMAX_DELAY);
+        if (!plan) break; // allocation failed: stop the loop instead of dereferencing null
+        size_t bytesread = 0;
+        esp_err_t readErr = i2s_channel_read(
+            i2s_chan, (char *)i2s_buffer, FFT_SIZE * sizeof(int16_t), &bytesread, portMAX_DELAY
+        );
+        if (readErr != ESP_OK || bytesread < FFT_SIZE * sizeof(int16_t)) {
+            fft_destroy(plan); // skip a frame that could not be fully read (avoids stale-buffer FFT)
+            continue;
+        }
 
         int16_t *samples = (int16_t *)i2s_buffer;
 

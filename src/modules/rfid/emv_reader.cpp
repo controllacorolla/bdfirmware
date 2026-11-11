@@ -34,19 +34,25 @@ void EMVReader::setup() {
 
 void EMVReader::parse_pan(std::vector<uint8_t> *afl_content, EMVCard *card) {
     auto pos = find(afl_content->begin(), afl_content->end(), 0x5A);
+    if (pos == afl_content->end() || pos + 1 == afl_content->end()) return;
     uint8_t len = *(pos + 1);
-    uint8_t pan_begin = distance(afl_content->begin(), pos) + 2;
+    size_t pan_begin = distance(afl_content->begin(), pos) + 2;
+    if (pan_begin >= afl_content->size()) return;
+    if (pan_begin + len > afl_content->size()) len = afl_content->size() - pan_begin;
     card->pan = (uint8_t *)malloc(len);
+    if (!card->pan) return;
     memcpy(card->pan, &afl_content->data()[pan_begin], len);
     card->pan_len = len;
 }
 
 void EMVReader::parse_validfrom(std::vector<uint8_t> *afl_content, EMVCard *card) {
     bool found = false;
-    for (size_t i = 0; i < afl_content->size() && !found; i++) {
+    for (size_t i = 0; i + 1 < afl_content->size() && !found; i++) {
         if (afl_content->at(i) == 0x5F && afl_content->at(i + 1) == 0x25) {
             size_t begin = i + 3; // The format is 0x5F 0x25 SIZE DATA so skip 3 bytes
+            if (begin + 1 >= afl_content->size()) break;
             card->validfrom = (uint8_t *)malloc(2);
+            if (!card->validfrom) break;
             // The format in card is YEAR/MONTH but I want MONTH/YEAR since is the standard format
             card->validfrom[0] = afl_content->at(begin + 1);
             card->validfrom[1] = afl_content->at(begin);
@@ -57,10 +63,12 @@ void EMVReader::parse_validfrom(std::vector<uint8_t> *afl_content, EMVCard *card
 
 void EMVReader::parse_validto(std::vector<uint8_t> *afl_content, EMVCard *card) {
     bool found = false;
-    for (size_t i = 0; i < afl_content->size() && !found; i++) {
+    for (size_t i = 0; i + 1 < afl_content->size() && !found; i++) {
         if (afl_content->at(i) == 0x5F && afl_content->at(i + 1) == 0x24) {
             size_t begin = i + 3; // The format is 0x5F 0x24 SIZE DATA so skip 3 bytes
+            if (begin + 1 >= afl_content->size()) break;
             card->validto = (uint8_t *)malloc(2);
+            if (!card->validto) break;
             // The format in card is YEAR/MONTH but I want MONTH/YEAR since is the standard format
             card->validto[0] = afl_content->at(begin + 1);
             card->validto[1] = afl_content->at(begin);
@@ -132,6 +140,7 @@ std::vector<uint8_t> EMVReader::emv_ask_for_pdol(std::vector<uint8_t> *aid) {
     uint8_t response_len = 0;
     std::vector<uint8_t> pdol;
     /* ------------------- AID -----------------*/
+    if (aid->size() < 7) return pdol; // SELECT copies a fixed 7-byte AID below
     uint8_t ask_for_pdol[] = {0x00, 0xa4, 0x04, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x90, 0x00};
     memcpy(ask_for_pdol + 5, aid->data(), 7);
 
@@ -211,6 +220,8 @@ void EMVReader::emv_read_visa(std::vector<uint8_t> *pdol_data, EMVCard *card) {
         std::vector<uint8_t> container;
         if (Tlv.GetValue("57", &container) != OK) {
             Serial.println("Can't get Track 2 Equivalent Data(PAN for VISA)");
+        } else if (container.size() < 11) {
+            Serial.println("Track 2 Equivalent Data too short");
         } else {
             Serial.println("PAN found in Track 2 Equivalent Data");
             card->pan = (uint8_t *)malloc(8);
@@ -261,7 +272,7 @@ std::vector<uint8_t> EMVReader::emv_read_record(uint8_t p1, uint8_t p2) {
 }
 
 void EMVReader::read_afl(EMVCard *card, std::vector<uint8_t> *afl) {
-    for (size_t i = 0; i < afl->size(); i += 4) {
+    for (size_t i = 0; i + 2 < afl->size(); i += 4) { // need at(i), at(i+1), at(i+2)
         uint8_t sfi = (afl->at(i) >> 3); // Get SFI from AFL entry
         uint8_t record_start = afl->at(i + 1);
         uint8_t record_end = afl->at(i + 2);
@@ -280,17 +291,25 @@ void EMVReader::read_afl(EMVCard *card, std::vector<uint8_t> *afl) {
                 Serial.println("PAN parsed with workaround");
                 return;
             } else {
-                memcpy(card->pan, container.data(), container.size()); // Copy data from TLV to struct
+                // card->pan/validfrom/validto start as nullptr — allocate before copying
+                // (the mallocs below line 300 are unreachable dead code after the return).
+                card->pan = (uint8_t *)malloc(container.size());
+                if (card->pan) {
+                    memcpy(card->pan, container.data(), container.size());
+                    card->pan_len = container.size();
+                }
                 container.clear();
                 if (Tlv.GetValue("5F25", &container) != OK) { // Get ValidFrom date
                     parse_validfrom(&afl_content, card);
                     parse_validto(&afl_content, card);
                 } else {
-                    memcpy(card->validfrom, container.data(), container.size());
+                    card->validfrom = (uint8_t *)malloc(container.size());
+                    if (card->validfrom) memcpy(card->validfrom, container.data(), container.size());
                     if (Tlv.GetValue("5F24", &container) != OK) { // Get ValidTo date
                         parse_validto(&afl_content, card);
                     } else {
-                        memcpy(card->validto, container.data(), container.size());
+                        card->validto = (uint8_t *)malloc(container.size());
+                        if (card->validto) memcpy(card->validto, container.data(), container.size());
                     }
                 }
                 Serial.println("PAN parsed without workaround");
@@ -328,7 +347,7 @@ EMVCard EMVReader::read_emv_card() {
     std::vector<uint8_t> aid = emv_ask_for_aid(); // Perform Application Selection
     if (_cancelled) return res;
 
-    if (aid.empty()) { // If we can't get AID, we can't read the card
+    if (aid.size() < 7) { // Need a full 7-byte AID (SELECT Lc=0x07 and the 7-byte memcmp lookups)
         res.parsed = false;
         Serial.println("Can't read card");
     } else {

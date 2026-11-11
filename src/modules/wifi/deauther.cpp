@@ -195,7 +195,9 @@ void cacheSameSSIDAPs() {
     for (int i = 0; i < n; i++) {
         if (WiFi.SSID(i) == currentSSID) {
             APInfo info;
-            memcpy(info.bssid, WiFi.BSSID((uint8_t)i), 6);
+            uint8_t *bssid = WiFi.BSSID((uint8_t)i);
+            if (!bssid) continue; // scan entry unavailable
+            memcpy(info.bssid, bssid, 6);
             info.channel = WiFi.channel((uint8_t)i);
             info.band = getWiFiBand(info.channel);
             info.is_5ghz = (info.band == 1 || info.band == 2);
@@ -238,7 +240,7 @@ int getAPChannel(const uint8_t *target_bssid, bool *found) {
     int numNetworks = WiFi.scanNetworks(false, false);
     for (int i = 0; i < numNetworks; i++) {
         uint8_t *bssid_ptr = WiFi.BSSID((uint8_t)i);
-        if (macCompare(bssid_ptr, target_bssid)) {
+        if (bssid_ptr && macCompare(bssid_ptr, target_bssid)) {
             found_channel = WiFi.channel((uint8_t)i);
             matched = true;
             break;
@@ -832,7 +834,9 @@ void deauthAllFromScan() {
 
         options.push_back({optionText.c_str(), [=]() {
                                uint8_t targetMAC[6];
-                               memcpy(targetMAC, WiFi.BSSID((uint8_t)i), 6);
+                               uint8_t *bssidPtr = WiFi.BSSID((uint8_t)i);
+                               if (bssidPtr) memcpy(targetMAC, bssidPtr, 6);
+                               else memset(targetMAC, 0, 6);
                                int ch = WiFi.channel((uint8_t)i);
                                WiFi.scanDelete();
 
@@ -1021,7 +1025,9 @@ void showAPSelectionForClientDeauth() {
 
         options.push_back({optionText.c_str(), [=]() {
                                uint8_t targetMAC[6];
-                               memcpy(targetMAC, WiFi.BSSID((uint8_t)i), 6);
+                               uint8_t *bssidPtr = WiFi.BSSID((uint8_t)i);
+                               if (bssidPtr) memcpy(targetMAC, bssidPtr, 6);
+                               else memset(targetMAC, 0, 6);
                                int ch = WiFi.channel((uint8_t)i);
                                WiFi.scanDelete();
 
@@ -1047,6 +1053,9 @@ void clientSnifferCallback(void *buf, wifi_promiscuous_pkt_type_t type) {
     wifi_header_t *header = (wifi_header_t *)pkt->payload;
 
     if (type == WIFI_PKT_DATA) {
+        // Guard against truncated/crafted frames shorter than the 802.11 header
+        // before reading addr1/addr2/addr3 (matches the len<24 guard in sniffer.cpp).
+        if (pkt->rx_ctrl.sig_len < sizeof(wifi_header_t)) return;
         uint8_t clientMAC[6];
         memcpy(clientMAC, header->addr2, 6);
 

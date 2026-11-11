@@ -236,7 +236,8 @@ private:
         return false;
     }
 
-    static bool cborSkip(CborCursor &c) {
+    static bool cborSkip(CborCursor &c, int depth = 0) {
+        if (depth > 16) return false; // bound recursion: a deeply nested CBOR message must not overflow the stack
         uint8_t major = 0, add = 0;
         if (!cborReadHead(c, major, add)) return false;
         uint32_t n = 0;
@@ -250,14 +251,14 @@ private:
         if (major == 4) {
             if (!cborReadLen(c, add, n)) return false;
             for (uint32_t i = 0; i < n; i++) {
-                if (!cborSkip(c)) return false;
+                if (!cborSkip(c, depth + 1)) return false;
             }
             return true;
         }
         if (major == 5) {
             if (!cborReadLen(c, add, n)) return false;
             for (uint32_t i = 0; i < n; i++) {
-                if (!cborSkip(c) || !cborSkip(c)) return false;
+                if (!cborSkip(c, depth + 1) || !cborSkip(c, depth + 1)) return false;
             }
             return true;
         }

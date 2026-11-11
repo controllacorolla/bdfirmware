@@ -966,9 +966,11 @@ RSNInfo extractRSNInfo(const uint8_t *frame, int len) {
         if (tag == 0x30 && tagLen >= 2) {
             if (pos + 2 + tagLen <= len) {
                 rsn.version = (frame[pos + 2] << 8) | frame[pos + 3];
-                uint8_t groupCipher = frame[pos + 4];
-                if (groupCipher == 0x00) rsn.groupCipher = 1;
-                else if (groupCipher == 0x02) rsn.groupCipher = 2;
+                if (tagLen >= 3) { // the group-cipher byte at pos+4 must lie within the element
+                    uint8_t groupCipher = frame[pos + 4];
+                    if (groupCipher == 0x00) rsn.groupCipher = 1;
+                    else if (groupCipher == 0x02) rsn.groupCipher = 2;
+                }
                 if (tagLen > 6) {
                     uint8_t pairwiseCipher = frame[pos + 8];
                     if (pairwiseCipher == 0x00) rsn.pairwiseCipher = 1;
@@ -1342,10 +1344,12 @@ void sendProbeResponse(const String &ssid, const String &mac, uint8_t channel) {
     probeResponse[pos++] = 0x01;
     probeResponse[pos++] = 0x04;
     probeResponse[pos++] = 0x00;
-    probeResponse[pos++] = ssid.length();
-    if (ssid.length() > 0 && ssid != "*HIDDEN*" && ssid != "*WILDCARD*") {
-        memcpy(&probeResponse[pos], ssid.c_str(), ssid.length());
-        pos += ssid.length();
+    size_t ssidLen = ssid.length();
+    if (ssidLen > 32) ssidLen = 32; // 802.11 SSID max; prevents probeResponse[] overflow
+    probeResponse[pos++] = ssidLen;
+    if (ssidLen > 0 && ssid != "*HIDDEN*" && ssid != "*WILDCARD*") {
+        memcpy(&probeResponse[pos], ssid.c_str(), ssidLen);
+        pos += ssidLen;
     }
     probeResponse[pos++] = 0x01;
     probeResponse[pos++] = sizeof(beacon_rates);
@@ -2268,6 +2272,9 @@ void probe_sniffer(void *buf, wifi_promiscuous_pkt_type_t type) {
     if (!storageAvailable) return;
 
     wifi_promiscuous_pkt_t *pkt = (wifi_promiscuous_pkt_t *)buf;
+    // Guard against runt/crafted frames before reading any 802.11 header bytes
+    // (frame[0] below, extractMAC's frame[10..15], the EAPOL frame+16 copy, etc.).
+    if (pkt->rx_ctrl.sig_len < 24) return;
     wifi_pkt_rx_ctrl_t ctrl = (wifi_pkt_rx_ctrl_t)pkt->rx_ctrl;
     const uint8_t *frame = pkt->payload;
     uint8_t frameSubType = (frame[0] & 0xF0) >> 4;

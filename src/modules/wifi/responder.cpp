@@ -44,9 +44,9 @@ WiFiServer smbServer(445);
 // Structure pour stocker un client SMB en cours et ses infos
 struct SMBClientState {
     WiFiClient client;
-    bool active;
-    uint64_t sessionId;
-    uint8_t challenge[8];
+    bool active = false;
+    uint64_t sessionId = 0;
+    uint8_t challenge[8] = {};
 } smbState;
 
 /* =================  CONST & FLAGS SMB  ================= */
@@ -237,6 +237,9 @@ void extractAndPrintHash(uint8_t *pkt, uint32_t smbLength, uint8_t *ntlm) {
 
     uint32_t base = ntlm - pkt; // offset of NTLMSSP in packet
 
+    // Bounds: the fields below read NTLM header bytes up to ntlm+51 (base+52).
+    if ((uint64_t)base + 52 > smbLength) return;
+
     // 2. Offsets and lengths in NTLM AUTH message
     uint16_t ntRespLen = le16(ntlm + 20);
     uint32_t ntRespOff = le32(ntlm + 24);
@@ -265,6 +268,8 @@ void extractAndPrintHash(uint8_t *pkt, uint32_t smbLength, uint8_t *ntlm) {
     challHex[16] = '\0';
 
     // 5. Full NTLMv2 response en hex
+    // Bounds: the NT-response blob must lie fully within the received packet.
+    if ((uint64_t)base + ntRespOff + ntRespLen > smbLength) return;
     String ntRespHex;
     for (uint16_t i = 0; i < ntRespLen; ++i) {
         char h[3];
@@ -485,23 +490,31 @@ void sendSMB2NegotiateFromSMB1() {
 
 void handleSMB1(uint8_t *pkt, uint32_t len) {
     // Structure header SMBv1 (32 octets)
+    if (len < 5) return;      // need the command byte at offset 4
     uint8_t command = pkt[4]; // offset 4
 
     // ----------  NEGOTIATE (0x72)  ----------
     if (command == 0x72) {
+        if (len < 35) return; // need the 2-byte ByteCount at offset 33..34
         /* point de départ = tout de suite après le BCC (2 octets)           */
         uint16_t bcc = pkt[33] | (pkt[34] << 8); // ByteCount
         const uint8_t *d = pkt + 35;             // <-- 35, pas 36
         const uint8_t *end = d + bcc;
+        const uint8_t *cap = pkt + len;          // never scan past the received buffer
+        if (end > cap) end = cap;
 
         bool smb2Asked = false;
         while (d < end && *d == 0x02) { // 0x02 = "dialect string"
             const char *name = (const char *)(d + 1);
-            if (strncmp(name, "SMB 2", 5) == 0) {
+            if ((end - (d + 1)) >= 5 && strncmp(name, "SMB 2", 5) == 0) {
                 smb2Asked = true;
                 break;
             }
-            d += 2 + strlen(name); // 0x02 + chaîne + '\0'
+            // bounded strlen: locate the NUL terminator within [d+1, end)
+            const uint8_t *p = d + 1;
+            while (p < end && *p != 0) p++;
+            if (p >= end) break;            // unterminated dialect string → stop
+            d += 2 + (size_t)(p - (d + 1)); // 0x02 + chaîne + '\0'
         }
 
         if (smb2Asked) {
@@ -515,10 +528,12 @@ void handleSMB1(uint8_t *pkt, uint32_t len) {
     }
     // ----------  SESSION SETUP ANDX (0x73) ----------
     if (command == 0x73) {                             // SMB_COM_SESSION_SETUP_ANDX
+        if (len < 47) return;                          // need the 2-byte AndXOffset at offset 45..46
         uint16_t andxOffset = *(uint16_t *)(pkt + 45); // début des données NTLM
         uint8_t *ntlm = pkt + andxOffset;
 
-        if (memcmp(ntlm, "NTLMSSP", 7) == 0 && len > andxOffset + 8) {
+        // Check the length bound BEFORE dereferencing ntlm (&& evaluates left→right)
+        if (len > (uint32_t)andxOffset + 8 && memcmp(ntlm, "NTLMSSP", 7) == 0) {
             uint8_t type = ntlm[8];
             if (type == 1) { // Type1 → envoyer challenge
                 Serial.println(F("NTLM Type 1 (SMB1) received"));
@@ -1058,8 +1073,8 @@ void responder() {
                                         smbState.active = false;
                                     }
                                 } else if (
-                                    packet[0] == 0xFF && packet[1] == 'S' && packet[2] == 'M' &&
-                                    packet[3] == 'B'
+                                    smbLength >= 5 && packet[0] == 0xFF && packet[1] == 'S' &&
+                                    packet[2] == 'M' && packet[3] == 'B'
                                 ) {
                                     Serial.println(F("Paquet SMBv1 received."));
                                     handleSMB1(packet, smbLength);

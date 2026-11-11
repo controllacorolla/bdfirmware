@@ -21,11 +21,11 @@
 struct SnifferPacket {
     String address;
     String name;
-    int rssi;
+    int rssi = 0;
     std::vector<uint8_t> payload;
     String payloadHex;
     String timestamp;
-    int channel;
+    int channel = 0;
 };
 
 static std::vector<SnifferPacket> snifferPackets;
@@ -70,7 +70,7 @@ static String parseManufacturerData(const std::vector<uint8_t> &payload) {
             break;
         case 0xFE2C:
             info += "(Google FastPair)";
-            if (payload.size() >= 6) {
+            if (payload.size() >= 7) {
                 uint32_t modelId = (payload[4] << 16) | (payload[5] << 8) | payload[6];
                 info += " Model: 0x" + String(modelId, HEX);
             }

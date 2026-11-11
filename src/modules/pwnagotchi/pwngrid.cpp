@@ -233,6 +233,8 @@ void pwnSnifferCallback(void *buf, wifi_promiscuous_pkt_type_t type) {
     WifiMgmtHdr *frameControl = (WifiMgmtHdr *)snifferPacket->payload;
 
     const uint8_t *frame = snifferPacket->payload;
+    // Runt/crafted frame: don't read fixed header offsets (addr/bssid up to payload[21]) OOB.
+    if (snifferPacket->rx_ctrl.sig_len < 24) return;
     const uint16_t frameCtrl = (uint16_t)frame[0] | ((uint16_t)frame[1] << 8);
     const uint8_t frameType = (frameCtrl & 0x0C) >> 2;
     const uint8_t frameSubType = (frameCtrl & 0xF0) >> 4;

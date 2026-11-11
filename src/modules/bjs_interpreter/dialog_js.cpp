@@ -14,22 +14,17 @@ JSValue native_dialogMessage(JSContext *ctx, JSValue *this_val, int argc, JSValu
     const char *leftButton = NULL;
     const char *centerButton = NULL;
     const char *rightButton = NULL;
+    // Keep each converted string's buffer alive until after displayMessage() and the returns
+    // below; for short strings JS_ToCString points into the JSCStringBuf, so it must not go
+    // out of scope while leftButton/centerButton/rightButton are still read.
+    JSCStringBuf lsb, csb, rsb;
     if (argc > 1 && JS_IsObject(ctx, argv[1])) {
         JSValue v = JS_GetPropertyStr(ctx, argv[1], "left");
-        if (!JS_IsUndefined(v)) {
-            JSCStringBuf sb;
-            leftButton = JS_ToCString(ctx, v, &sb);
-        }
+        if (!JS_IsUndefined(v)) { leftButton = JS_ToCString(ctx, v, &lsb); }
         v = JS_GetPropertyStr(ctx, argv[1], "center");
-        if (!JS_IsUndefined(v)) {
-            JSCStringBuf sb;
-            centerButton = JS_ToCString(ctx, v, &sb);
-        }
+        if (!JS_IsUndefined(v)) { centerButton = JS_ToCString(ctx, v, &csb); }
         v = JS_GetPropertyStr(ctx, argv[1], "right");
-        if (!JS_IsUndefined(v)) {
-            JSCStringBuf sb;
-            rightButton = JS_ToCString(ctx, v, &sb);
-        }
+        if (!JS_IsUndefined(v)) { rightButton = JS_ToCString(ctx, v, &rsb); }
     }
     if (argc < 1 || !JS_IsString(ctx, argv[0]))
         return JS_ThrowTypeError(ctx, "dialog.message(msg:string, buttons?:object)");
@@ -114,7 +109,7 @@ JSValue native_dialogPickFile(JSContext *ctx, JSValue *this_val, int argc, JSVal
 JSValue native_dialogChoice(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
     // usage: dialogChoice(choices : string[] | [key: string, value: string][] | {[key: string]: string})
     // returns: string or empty string
-    const char *result = "";
+    String selected; // owns the chosen value so it stays valid after options.clear() below
     if (argc < 1 || !JS_IsObject(ctx, argv[0])) {
         return JS_ThrowTypeError(ctx, "dialogChoice: Choice argument must be object or array.");
     }
@@ -131,7 +126,10 @@ JSValue native_dialogChoice(JSContext *ctx, JSValue *this_val, int argc, JSValue
             if (JS_IsString(ctx, jsvChoice)) {
                 JSCStringBuf sb;
                 const char *s = JS_ToCString(ctx, jsvChoice, &sb);
-                options.push_back({s, [&result, s]() { result = s; }});
+                if (s) {
+                    String sval = s; // s points into sb, which dies at this scope; own a copy
+                    options.push_back({sval.c_str(), [&selected, sval]() { selected = sval; }});
+                }
             } else if (JS_GetClassID(ctx, jsvChoice) == JS_CLASS_ARRAY) {
                 /* element is expected to be [key, value] */
                 JSValue jsvInnerArrayLength = JS_GetPropertyStr(ctx, jsvChoice, "length");
@@ -143,10 +141,13 @@ JSValue native_dialogChoice(JSContext *ctx, JSValue *this_val, int argc, JSValue
                     JSValue jsvKey = JS_GetPropertyUint32(ctx, jsvChoice, 0);
                     JSValue jsvValue = JS_GetPropertyUint32(ctx, jsvChoice, 1);
                     if (JS_IsString(ctx, jsvKey) && JS_IsString(ctx, jsvValue)) {
-                        JSCStringBuf sb;
-                        const char *key = JS_ToCString(ctx, jsvKey, &sb);
-                        const char *value = JS_ToCString(ctx, jsvValue, &sb);
-                        options.push_back({key, [value, &result]() { result = value; }});
+                        JSCStringBuf ksb, vsb; // separate buffers: one sb can't hold both
+                        const char *key = JS_ToCString(ctx, jsvKey, &ksb);
+                        const char *value = JS_ToCString(ctx, jsvValue, &vsb);
+                        if (key && value) {
+                            String vval = value; // own a copy; value points into vsb
+                            options.push_back({key, [&selected, vval]() { selected = vval; }});
+                        }
                     }
                 }
             }
@@ -165,7 +166,10 @@ JSValue native_dialogChoice(JSContext *ctx, JSValue *this_val, int argc, JSValue
             if (JS_IsString(ctx, jsvVal)) {
                 JSCStringBuf sb;
                 const char *val = JS_ToCString(ctx, jsvVal, &sb);
-                options.push_back({key, [val, &result]() { result = val; }});
+                if (val) {
+                    String vval = val; // own a copy; val points into sb
+                    options.push_back({key, [&selected, vval]() { selected = vval; }});
+                }
             }
         }
     }
@@ -173,7 +177,7 @@ JSValue native_dialogChoice(JSContext *ctx, JSValue *this_val, int argc, JSValue
     loopOptions(options, MENU_TYPE_REGULAR, "", 0, true);
     options.clear();
 
-    return JS_NewString(ctx, result);
+    return JS_NewString(ctx, selected.c_str());
 }
 
 JSValue native_dialogViewFile(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
@@ -272,8 +276,10 @@ native_dialogCreateTextViewerGetVisibleText(JSContext *ctx, JSValue *this_val, i
     if (area == NULL) return JS_ThrowTypeError(ctx, "TextViewer: does not exist");
     String visibleText;
     visibleText.reserve(area->getMaxVisibleTextLength());
-    for (size_t i = area->firstVisibleLine; i < area->lastVisibleLine - 1; i++)
-        visibleText += area->linesBuffer[i];
+    // lastVisibleLine can be 0 (never drawn) → lastVisibleLine-1 underflows size_t; clamp.
+    size_t end = (area->lastVisibleLine > 1) ? area->lastVisibleLine - 1 : 0;
+    if (end > area->linesBuffer.size()) end = area->linesBuffer.size();
+    for (size_t i = area->firstVisibleLine; i < end; i++) visibleText += area->linesBuffer[i];
     return JS_NewString(ctx, visibleText.c_str());
 }
 

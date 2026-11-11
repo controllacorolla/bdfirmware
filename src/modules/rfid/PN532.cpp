@@ -186,7 +186,9 @@ bool tgGetDataIrq(Adafruit_PN532 &nfc, uint8_t *out, uint8_t maxLen, uint8_t *ou
     if (frame[6] != (PN532_COMMAND_TGGETDATA + 1)) return false;
 
     *status = frame[7];
-    uint8_t dataLen = frame[3] > 3 ? static_cast<uint8_t>(frame[3] - 3) : 0;
+    // Clamp to the real frame[] buffer: frame[3] is chip/card-controlled and the
+    // payload starts at offset 8, so at most sizeof(frame)-8 bytes are available.
+    uint8_t dataLen = frame[3] > 3 ? std::min<uint8_t>(frame[3] - 3, sizeof(frame) - 8) : 0;
     uint8_t copyLen = std::min<uint8_t>(dataLen, maxLen);
     if (copyLen > 0) memcpy(out, frame + 8, copyLen);
     *outLen = copyLen;
@@ -992,7 +994,8 @@ void PN532::parse_data() {
     strUID.trim();
     strUID.replace(" ", "");
     uid.size = strUID.length() / 2;
-    for (size_t i = 0; i < strUID.length(); i += 2) {
+    if (uid.size > sizeof(uid.uidByte)) uid.size = sizeof(uid.uidByte);
+    for (size_t i = 0; i < strUID.length() && i / 2 < sizeof(uid.uidByte); i += 2) {
         uid.uidByte[i / 2] = strtoul(strUID.substring(i, i + 2).c_str(), NULL, 16);
     }
 
@@ -1002,7 +1005,7 @@ void PN532::parse_data() {
     String strAtqa = printableUID.atqa;
     strAtqa.trim();
     strAtqa.replace(" ", "");
-    for (size_t i = 0; i < strAtqa.length(); i += 2) {
+    for (size_t i = 0; i < strAtqa.length() && i / 2 < sizeof(uid.atqaByte); i += 2) {
         uid.atqaByte[i / 2] = strtoul(strAtqa.substring(i, i + 2).c_str(), NULL, 16);
     }
 }
@@ -1175,7 +1178,7 @@ int PN532::read_mifare_ultralight_data_blocks() {
     byte i;
     String strPage = "";
 
-    uint8_t buf[4];
+    uint8_t buf[4] = {0}; // avoid reading buf[2] uninitialized if the page read fails
     nfc.mifareultralight_ReadPage(3, buf);
     switch (buf[2]) {
         // NTAG213

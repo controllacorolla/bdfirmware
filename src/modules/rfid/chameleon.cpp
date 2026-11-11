@@ -493,7 +493,8 @@ void Chameleon::parseLFUID() {
     strUID.replace(" ", "");
 
     lfTagData.size = strUID.length() / 2;
-    for (size_t i = 0; i < strUID.length(); i += 2) {
+    if (lfTagData.size > sizeof(lfTagData.uidByte)) lfTagData.size = sizeof(lfTagData.uidByte);
+    for (size_t i = 0; i < strUID.length() && i / 2 < sizeof(lfTagData.uidByte); i += 2) {
         lfTagData.uidByte[i / 2] = strtoul(strUID.substring(i, i + 2).c_str(), NULL, 16);
     }
 }
@@ -945,7 +946,8 @@ void Chameleon::parseHFData() {
     strUID.trim();
     strUID.replace(" ", "");
     hfTagData.size = strUID.length() / 2;
-    for (size_t i = 0; i < strUID.length(); i += 2) {
+    if (hfTagData.size > sizeof(hfTagData.uidByte)) hfTagData.size = sizeof(hfTagData.uidByte);
+    for (size_t i = 0; i < strUID.length() && i / 2 < sizeof(hfTagData.uidByte); i += 2) {
         hfTagData.uidByte[i / 2] = strtoul(strUID.substring(i, i + 2).c_str(), NULL, 16);
     }
 
@@ -955,7 +957,7 @@ void Chameleon::parseHFData() {
     String strATQA = printableHFUID.atqa;
     strATQA.trim();
     strATQA.replace(" ", "");
-    for (size_t i = 0; i < strATQA.length(); i += 2) {
+    for (size_t i = 0; i < strATQA.length() && i / 2 < sizeof(hfTagData.atqaByte); i += 2) {
         hfTagData.atqaByte[i / 2] = strtoul(strATQA.substring(i, i + 2).c_str(), NULL, 16);
     }
 }

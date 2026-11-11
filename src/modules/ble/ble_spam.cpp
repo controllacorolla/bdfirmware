@@ -1085,8 +1085,10 @@ static const char *bleSpamGetDeviceName(BleSpamAttackType type, int index) {
             int savedBase = nPresets + 1;
             int addNewIdx = savedBase + (int)saved.size();
             if (index >= savedBase && index < addNewIdx) {
+                size_t i = (size_t)(index - savedBase);
+                if (i >= saved.size()) return "Windows";
                 strncpy(
-                    bleSpamDeviceNameBuf, saved[index - savedBase].c_str(), sizeof(bleSpamDeviceNameBuf) - 1
+                    bleSpamDeviceNameBuf, saved[i].c_str(), sizeof(bleSpamDeviceNameBuf) - 1
                 );
                 bleSpamDeviceNameBuf[sizeof(bleSpamDeviceNameBuf) - 1] = '\0';
                 return bleSpamDeviceNameBuf;
@@ -1107,8 +1109,10 @@ static const char *bleSpamGetDeviceName(BleSpamAttackType type, int index) {
             int savedBase = nPresets + 1;
             int addNewIdx = savedBase + (int)saved.size();
             if (index >= savedBase && index < addNewIdx) {
+                size_t i = (size_t)(index - savedBase);
+                if (i >= saved.size()) return "Beacon";
                 strncpy(
-                    bleSpamDeviceNameBuf, saved[index - savedBase].c_str(), sizeof(bleSpamDeviceNameBuf) - 1
+                    bleSpamDeviceNameBuf, saved[i].c_str(), sizeof(bleSpamDeviceNameBuf) - 1
                 );
                 bleSpamDeviceNameBuf[sizeof(bleSpamDeviceNameBuf) - 1] = '\0';
                 return bleSpamDeviceNameBuf;
@@ -1696,7 +1700,7 @@ static void bleSpamRenderConfigRows(
     tft.setTextSize(FP);
 
     struct RowInfo {
-        const char *label;
+        const char *label = nullptr;
         String value;
     } rows[] = {
         {"Adv ms",   bleSpamFormatMs(config.adv_ms)           },
@@ -2166,17 +2170,19 @@ static bool bleSpamHandleCustomNameDevice(
     }
 
     if (deviceIndex >= savedBase && deviceIndex < addNewIdx) {
+        size_t i = (size_t)(deviceIndex - savedBase);
+        if (i >= saved.size()) return false;
         // It's a saved custom name — show Use/Delete prompt
         int choice = bleSpamTwoOptionPrompt(
-            String(saved[deviceIndex - savedBase]), "Use Saved Name", "Delete Saved Name"
+            String(saved[i]), "Use Saved Name", "Delete Saved Name"
         );
         if (choice == 1) {
             // Delete
-            saved.erase(saved.begin() + (deviceIndex - savedBase));
+            saved.erase(saved.begin() + i);
             bleSpamSaveCustomNames(ns, saved);
             return false;
         } else if (choice == 0) {
-            nameVar = saved[deviceIndex - savedBase];
+            nameVar = saved[i];
             selection.device_index = deviceIndex;
             return true; // proceed to config+run
         }

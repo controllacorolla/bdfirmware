@@ -331,12 +331,12 @@ void loadFacesAndNames() {
                 int start = 0;
                 int end = faces_line.indexOf(',', start);
                 num_faces = 0;
-                while (end != -1) {
+                while (end != -1 && num_faces < 30) {
                     faces[num_faces++] = strdup(faces_line.substring(start, end).c_str());
                     start = end + 1;
                     end = faces_line.indexOf(',', start);
                 }
-                faces[num_faces++] = strdup(faces_line.substring(start).c_str());
+                if (num_faces < 30) faces[num_faces++] = strdup(faces_line.substring(start).c_str());
             } else if (line.startsWith("names=")) {
                 String names_line = line.substring(6);
                 names_line.replace("\"", ""); // Remove quotes
@@ -344,12 +344,12 @@ void loadFacesAndNames() {
                 int start = 0;
                 int end = names_line.indexOf(',', start);
                 num_names = 0;
-                while (end != -1) {
+                while (end != -1 && num_names < 30) {
                     names[num_names++] = strdup(names_line.substring(start, end).c_str());
                     start = end + 1;
                     end = names_line.indexOf(',', start);
                 }
-                names[num_names++] = strdup(names_line.substring(start).c_str());
+                if (num_names < 30) names[num_names++] = strdup(names_line.substring(start).c_str());
             }
         }
         file.close();

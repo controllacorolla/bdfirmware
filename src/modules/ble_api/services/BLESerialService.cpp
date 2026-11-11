@@ -58,11 +58,13 @@ size_t BLESerialService::println(size_t n) {
 }
 
 void BLESerialService::vprintf(const char *fmt, va_list args) {
-    int size = vsnprintf(NULL, 0, fmt, args) + 1;
     char str[BUFFER_SIZE];
-    sprintf(str, fmt, args);
-
-    bleNotifyRetry(serial_char, reinterpret_cast<const uint8_t *>(str), size);
+    // vsnprintf consumes the va_list and bounds the write to the buffer; the previous
+    // sprintf(str, fmt, args) both ignored the buffer size and mis-passed the va_list.
+    int n = vsnprintf(str, sizeof(str), fmt, args);
+    if (n < 0) return;
+    size_t out = ((size_t)n < sizeof(str)) ? (size_t)n : sizeof(str) - 1;
+    bleNotifyRetry(serial_char, reinterpret_cast<const uint8_t *>(str), out);
     vTaskDelay(pdMS_TO_TICKS(10));
 }
 
