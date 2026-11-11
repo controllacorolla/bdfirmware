@@ -68,6 +68,22 @@ String extractFilename(const String &filepath) {
     return name;
 }
 
+// Derive a short uppercase format label from the file extension (e.g. "MP3",
+// "WAV"). Falls back to "AUDIO" for a missing or unrecognized extension.
+String audioFormatLabel(const String &filepath) {
+    int lastDot = filepath.lastIndexOf('.');
+    int lastSlash = filepath.lastIndexOf('/');
+    if (lastDot <= lastSlash) return "AUDIO"; // no extension (dot, if any, is in a folder name)
+    String ext = filepath.substring(lastDot + 1);
+    ext.toUpperCase();
+    if (ext == "MP3" || ext == "WAV" || ext == "FLAC" || ext == "OGG" || ext == "AAC" ||
+        ext == "M4A" || ext == "OPUS" || ext == "MOD" || ext == "WMA" || ext == "MIDI" ||
+        ext == "MID") {
+        return ext;
+    }
+    return "AUDIO";
+}
+
 // ===== GRAPHICS ENGINE =====
 
 // Draw vector icons with better visibility
@@ -326,7 +342,7 @@ void musicPlayerUI(FS *fs, const String &filepath) {
         tft.setTextSize(2);
 
         // Center "AUDIO" text in box
-        String AudioFormatLabel = "AUDIO";              // TODO: Use file extension
+        String AudioFormatLabel = audioFormatLabel(filepath);
         int textWidth = AudioFormatLabel.length() * 12; // textSize(2): 6 pixel base * 2 = 12 pixel per char
         int textHeight = 16;                            // textSize(2): 8 pixel base * 2 = 16 pixel
         int centerX = ui.MARGIN_X + (boxSize - textWidth) / 2 + 2; // Offset 5
