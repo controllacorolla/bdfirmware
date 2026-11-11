@@ -182,7 +182,8 @@ const DuckyCombination duckyComb[] PROGMEM = {
     {"CTRL-ALT-GUI",   KEY_LEFT_CTRL, KEY_LEFT_ALT,     KEY_LEFT_GUI  },
     {"ALT-SHIFT-GUI",  KEY_LEFT_ALT,  KEY_LEFT_SHIFT,   KEY_LEFT_GUI  },
     {"CTRL-SHIFT-GUI", KEY_LEFT_CTRL, KEY_LEFT_SHIFT,   KEY_LEFT_GUI  },
-    {"SYSREQ",         KEY_LEFT_ALT,  KEY_PRINT_SCREEN, 0             }
+    {"SYSREQ",         KEY_LEFT_ALT,  KEY_PRINT_SCREEN, 0             },
+    {"SYSRQ",          KEY_LEFT_ALT,  KEY_PRINT_SCREEN, 0             }
 };
 
 const DuckyCommandLookup duckyCmds[] PROGMEM = {
@@ -215,6 +216,7 @@ const DuckyCommandLookup duckyCmds[] PROGMEM = {
     {"ALT-SHIFT-GUI",         0,                DuckyCommandType_Combination       },
     {"CTRL-SHIFT-GUI",        0,                DuckyCommandType_Combination       },
     {"SYSREQ",                0,                DuckyCommandType_Combination       },
+    {"SYSRQ",                 0,                DuckyCommandType_Combination       },
     {"BACKSPACE",             KEYBACKSPACE,     DuckyCommandType_Cmd               },
     {"DELETE",                KEY_DELETE,       DuckyCommandType_Cmd               },
     {"ALT",                   KEY_LEFT_ALT,     DuckyCommandType_Cmd               },
