@@ -245,6 +245,14 @@ bool readSubFile(FS *fs, const String &filepath, RfCodes &data) {
 
     if (!fs) return false;
 
+    // Clear global signal vectors so a previously read file does not contaminate
+    // this one. Without this, reading file B after file A appends B's codes to
+    // A's leftovers — sending a merged signal that matches neither file.
+    bitList.clear();
+    bitRawList.clear();
+    keyList.clear();
+    rawDataList.clear();
+
     databaseFile = fs->open(filepath, FILE_READ);
 
     if (!databaseFile) {

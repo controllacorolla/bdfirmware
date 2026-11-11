@@ -259,8 +259,9 @@ void sendmsg() {
     }
     msg = keyboard(msg, 256, "Message:");
     if (msg == "\x1B") return;
+    if (msg == "") return; // check BEFORE prepending display name — otherwise
+                           // the check never triggers and we send "Name: "
     msg = String(displayName) + ": " + msg;
-    if (msg == "") return;
     Serial.println(msg);
     if (!sendLoraMessage(msg)) {
         update = true;

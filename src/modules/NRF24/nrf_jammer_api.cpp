@@ -17,9 +17,22 @@ static int targetChannel = 0;
 static bool isHopping = false;
 static unsigned long jamStartTime = 0;
 
+// BLE channel numbers (0-39) used for display / getCurrentBLEChannel().
 static byte bleAdvertisingChannels[] = {37, 38, 39};
 static byte bleDataChannels[] = {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18,
                                  19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36};
+
+// Convert a BLE channel number (0-39) to the nRF24L01+ RF channel
+// (nRF24 frequency = 2400 + ch MHz). The old code passed BLE channel numbers
+// directly to setChannel()/startConstCarrier(), jamming wrong frequencies.
+// E.g. BLE adv ch 37 = 2402 MHz = nRF24 ch 2, NOT nRF24 ch 37 = 2437 MHz.
+static uint8_t bleToNrf24Channel(uint8_t bleCh) {
+    if (bleCh == 37) return 2;   // 2402 MHz
+    if (bleCh == 38) return 26;  // 2426 MHz
+    if (bleCh == 39) return 80;  // 2480 MHz
+    if (bleCh <= 10) return 4 + bleCh * 2;        // 2404 + bleCh*2 MHz
+    return 28 + (bleCh - 11) * 2;                  // 2428 + (bleCh-11)*2 MHz
+}
 
 bool isNRF24Available() {
     if (!nrf24Initialized) {
@@ -45,27 +58,27 @@ bool startBLEJammer(BLEJamMode mode, int param) {
 
     switch (mode) {
         case BLE_JAM_ADV_CHANNELS:
-            NRFradio.startConstCarrier(currentPowerLevel, bleAdvertisingChannels[0]);
+            NRFradio.startConstCarrier(currentPowerLevel, bleToNrf24Channel(bleAdvertisingChannels[0]));
             isHopping = false;
             break;
         case BLE_JAM_ALL_CHANNELS:
-            NRFradio.startConstCarrier(currentPowerLevel, 0);
+            NRFradio.startConstCarrier(currentPowerLevel, bleToNrf24Channel(0));
             isHopping = false;
             break;
         case BLE_JAM_TARGET_CHANNEL:
             if (param >= 0 && param <= 39) {
                 targetChannel = param;
-                NRFradio.startConstCarrier(currentPowerLevel, targetChannel);
+                NRFradio.startConstCarrier(currentPowerLevel, bleToNrf24Channel(targetChannel));
                 isHopping = false;
             }
             break;
         case BLE_JAM_HOP_ADV:
-            NRFradio.startConstCarrier(currentPowerLevel, bleAdvertisingChannels[0]);
+            NRFradio.startConstCarrier(currentPowerLevel, bleToNrf24Channel(bleAdvertisingChannels[0]));
             isHopping = true;
             currentChannelIndex = 0;
             break;
         case BLE_JAM_HOP_ALL:
-            NRFradio.startConstCarrier(currentPowerLevel, 0);
+            NRFradio.startConstCarrier(currentPowerLevel, bleToNrf24Channel(0));
             isHopping = true;
             currentChannelIndex = 0;
             break;
@@ -89,11 +102,12 @@ void updateBLEJammer() {
             channels = bleAdvertisingChannels;
             channelCount = 3;
         } else if (currentMode == BLE_JAM_HOP_ALL) {
-            // Cycle through all 39 BLE channels: 0-35 data, 36-38 advertising
-            currentChannelIndex = (currentChannelIndex + 1) % 39;
-            if (currentChannelIndex < 36) {
+            // BLE has 40 channels: 37 data (0-36) + 3 advertising (37-39).
+            // The old modulus of 39 and boundary of 36 skipped data channel 36.
+            currentChannelIndex = (currentChannelIndex + 1) % 40;
+            if (currentChannelIndex < 37) {
                 channels = bleDataChannels;
-                channelCount = 36;
+                channelCount = 37;
             } else {
                 channels = bleAdvertisingChannels;
                 channelCount = 3;
@@ -103,8 +117,8 @@ void updateBLEJammer() {
             uint8_t ch;
             if (currentMode == BLE_JAM_HOP_ALL) {
                 // For HOP_ALL, index into the correct sub-array
-                ch = (currentChannelIndex < 36) ? bleDataChannels[currentChannelIndex]
-                                                 : bleAdvertisingChannels[currentChannelIndex - 36];
+                ch = (currentChannelIndex < 37) ? bleDataChannels[currentChannelIndex]
+                                                 : bleAdvertisingChannels[currentChannelIndex - 37];
             } else {
                 currentChannelIndex = (currentChannelIndex + 1) % channelCount;
                 ch = channels[currentChannelIndex];
@@ -113,19 +127,21 @@ void updateBLEJammer() {
             // Bare setChannel() during active CW leaves the PLL in an
             // undefined state on many PA+LNA modules — carrier freezes
             // or stops after the first hop.
+            // `ch` holds a BLE channel number — convert to nRF24 RF channel.
+            uint8_t rfCh = bleToNrf24Channel(ch);
             NRFradio.stopConstCarrier();
             delayMicroseconds(500);
             NRFradio.powerDown();
             delayMicroseconds(500);
             NRFradio.powerUp();
             delayMicroseconds(200);
-            NRFradio.setChannel(ch);
+            NRFradio.setChannel(rfCh);
             // Re-apply settings — power cycle clears radio registers
             NRFradio.setPALevel(currentPowerLevel);
             NRFradio.setDataRate(RF24_2MBPS);
             NRFradio.setAddressWidth(3);
             NRFradio.setPayloadSize(2);
-            NRFradio.startConstCarrier(currentPowerLevel, ch);
+            NRFradio.startConstCarrier(currentPowerLevel, rfCh);
             lastChannelHop = millis();
         }
     }
@@ -152,10 +168,10 @@ int getCurrentBLEChannel() {
         if (currentMode == BLE_JAM_HOP_ADV && currentChannelIndex < 3) {
             return bleAdvertisingChannels[currentChannelIndex];
         } else if (currentMode == BLE_JAM_HOP_ALL) {
-            if (currentChannelIndex < 36) {
+            if (currentChannelIndex < 37) {
                 return bleDataChannels[currentChannelIndex];
             } else {
-                return bleAdvertisingChannels[currentChannelIndex - 36];
+                return bleAdvertisingChannels[currentChannelIndex - 37];
             }
         }
     }

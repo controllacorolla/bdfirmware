@@ -227,11 +227,12 @@ bool rf_tx_raw_timings(const int *timings) {
 
 bool rf_tx_raw_bits(const String &bits, int te) {
     if (bits.length() == 0 || te <= 0) return false;
-    // Each bit is one half-pulse of `te` µs at the matching level. Matches the
-    // legacy bit sender, which walked the string from the end toward the start.
+    // BinRAW stores bits in time order: the first bit in the string is the first
+    // pulse transmitted. The old code iterated end-to-start (reverse), sending
+    // the signal backwards — fixed to iterate forward.
     std::vector<int> durs;
     durs.reserve(bits.length());
-    for (int i = bits.length() - 1; i >= 0; i--) {
+    for (int i = 0; i < (int)bits.length(); i++) {
         char c = bits[i];
         if (c == '1') durs.push_back(te);
         else if (c == '0') durs.push_back(-te);

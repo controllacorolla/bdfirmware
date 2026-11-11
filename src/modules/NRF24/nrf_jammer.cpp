@@ -27,7 +27,13 @@ void nrf_jammer() {
     byte ble_channels[] = {2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
                            22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41};
 
-    byte ble_adv_priority[] = {37, 38, 39, 1, 2, 3, 25, 26, 27, 79, 80, 81};
+    // BLE advertising channels map to nRF24 channels as:
+    //   BLE ch 37 = 2402 MHz = nRF24 ch 2
+    //   BLE ch 38 = 2426 MHz = nRF24 ch 26
+    //   BLE ch 39 = 2480 MHz = nRF24 ch 80
+    // The old array started with nRF24 channels 37-39 (2437-2439 MHz) which are
+    // NOT the BLE advertising frequencies, wasting jammer time on wrong channels.
+    byte ble_adv_priority[] = {2, 26, 80, 1, 3, 25, 27, 79, 81};
 
     byte bluetooth_channels[] = {2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17,
                                  18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33,

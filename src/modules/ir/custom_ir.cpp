@@ -150,6 +150,18 @@ bool txIrFile(FS *fs, const String &filepath, bool hideDefaultUI) {
                         break;
                     }
                 }
+                // EOF without "#" delimiter: send the last accumulated raw code.
+                // Flipper .ir files typically have no trailing "#" after the last
+                // code, so without this the final code was silently dropped.
+                if (frequency != 0 && rawData != "") {
+                    IRCode code;
+                    code.type = "raw";
+                    code.data = rawData;
+                    code.frequency = frequency;
+                    sendIRCommand(&code, hideDefaultUI);
+                    rawData = "";
+                    frequency = 0;
+                }
             } else if (type == "parsed") {
                 Serial.println("PARSED");
                 while (databaseFile.available()) {
@@ -175,7 +187,7 @@ bool txIrFile(FS *fs, const String &filepath, bool hideDefaultUI) {
                     } else if (line.startsWith("bits:")) {
                         bits = line.substring(strlen("bits:")).toInt();
                         Serial.println("bits: " + bits);
-                    } else if (line.indexOf("#") != -1) { // TODO: also detect EOF
+                    } else if (line.indexOf("#") != -1) {
                         IRCode code(protocol, address, command, value, bits);
                         sendIRCommand(&code, hideDefaultUI);
 
@@ -188,6 +200,16 @@ bool txIrFile(FS *fs, const String &filepath, bool hideDefaultUI) {
                         line = "";
                         break;
                     }
+                }
+                // EOF without "#" delimiter: send the last accumulated parsed code.
+                if (protocol != "") {
+                    IRCode code(protocol, address, command, value, bits);
+                    sendIRCommand(&code, hideDefaultUI);
+                    protocol = "";
+                    address = "";
+                    command = "";
+                    value = "";
+                    bits = 32;
                 }
             }
         }
@@ -342,20 +364,19 @@ void sendNECextCommand(String address, String command, bool hideDefaultUI) {
     irsend.begin();
     if (!hideDefaultUI) { displayTextLine("Sending.."); }
 
-    int first_zero_byte_pos = address.indexOf("00", 2);
-    if (first_zero_byte_pos != -1) address = address.substring(0, first_zero_byte_pos);
-    first_zero_byte_pos = command.indexOf("00", 2);
-    if (first_zero_byte_pos != -1) command = command.substring(0, first_zero_byte_pos);
-
     address.replace(" ", "");
     command.replace(" ", "");
 
-    uint16_t addressValue = strtoul(address.c_str(), nullptr, 16);
-    uint16_t commandValue = strtoul(command.c_str(), nullptr, 16);
+    // Flipper stores NECext address/command as 4 LE hex bytes ("AB CD 00 00").
+    // After removing spaces, right-pad to 8 hex chars so swap32 converts them to
+    // the correct native 16-bit value. The old approach of trimming trailing "00"
+    // bytes corrupted addresses whose second byte was legitimately 0x00 (e.g.
+    // "80 00 00 00" = address 0x0080 was mis-parsed as 0x8000).
+    while (address.length() < 8) address += "0";
+    while (command.length() < 8) command += "0";
 
-    // Invert Endianness
-    uint16_t newAddress = (addressValue >> 8) | (addressValue << 8);
-    uint16_t newCommand = (commandValue >> 8) | (commandValue << 8);
+    uint16_t newAddress = static_cast<uint16_t>(swap32(strtoul(address.c_str(), nullptr, 16)));
+    uint16_t newCommand = static_cast<uint16_t>(swap32(strtoul(command.c_str(), nullptr, 16)));
 
     // NEC protocol bit order is LSB first
     uint16_t lsbAddress = reverseBits(newAddress, 16);

