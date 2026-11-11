@@ -6,7 +6,7 @@
 #include <driver/rmt_tx.h>
 
 struct RawRecording {
-    float frequency;
+    float frequency = 0.f;
     std::vector<rmt_symbol_word_t *> codes;
     std::vector<uint16_t> codeLengths;
     std::vector<uint16_t> gaps;
@@ -49,21 +49,21 @@ struct RfCodes {
 };
 
 struct FreqFound {
-    float freq;
-    int rssi;
+    float freq = 0.f;
+    int rssi = 0;
 };
 
 struct HighLow {
-    uint8_t high; // 1
-    uint8_t low;  // 31
+    uint8_t high = 0;
+    uint8_t low = 0;
 };
 
 struct Protocol {
-    uint16_t pulseLength; // base pulse length in microseconds, e.g. 350
-    HighLow syncFactor;
-    HighLow zero;
-    HighLow one;
-    bool invertedSignal;
+    uint16_t pulseLength = 0;
+    HighLow syncFactor{};
+    HighLow zero{};
+    HighLow one{};
+    bool invertedSignal = false;
 };
 
 struct KeeloqKey {

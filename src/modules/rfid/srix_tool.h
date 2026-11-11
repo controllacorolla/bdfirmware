@@ -44,6 +44,8 @@ public:
 
     SRIXTool();
     ~SRIXTool();
+    SRIXTool(const SRIXTool&) = delete;
+    SRIXTool& operator=(const SRIXTool&) = delete;
 
     void setup();
     void loop();
@@ -76,14 +78,14 @@ private:
     bool _has_hardware_pins = false;
 #endif
 
-    SRIX_State current_state;
+    SRIX_State current_state = IDLE_MODE;
     bool _tag_read = false;
     bool _screen_drawn = false;
     uint32_t _lastReadTime = 0;
 
     // RAM storage for 128 blocks (512 bytes)
-    uint8_t _dump[128 * 4];
-    uint8_t _uid[8];
+    uint8_t _dump[128 * 4]{};
+    uint8_t _uid[8]{};
     bool _dump_valid_from_read = false;
     bool _dump_valid_from_load = false;
 

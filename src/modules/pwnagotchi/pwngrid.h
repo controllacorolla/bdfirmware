@@ -14,20 +14,20 @@ Thanks to @bmorcelli for his help doing a better code.
 #include <vector>
 
 typedef struct {
-    int epoch;
+    int epoch = 0;
     String face;
     String grid_version;
     String identity;
     String name;
-    int pwnd_run;
-    int pwnd_tot;
+    int pwnd_run = 0;
+    int pwnd_tot = 0;
     String session_id;
-    int timestamp;
-    int uptime;
+    int timestamp = 0;
+    int uptime = 0;
     String version;
-    signed int rssi;
-    unsigned long last_ping;
-    bool gone;
+    signed int rssi = 0;
+    unsigned long last_ping = 0;
+    bool gone = false;
 } pwngrid_peer;
 
 void initPwngrid();

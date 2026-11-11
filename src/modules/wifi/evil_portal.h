@@ -24,6 +24,8 @@ public:
         bool autoMode = false, bool backgroundMode = false, String templateFile = ""
     );
     ~EvilPortal();
+    EvilPortal(const EvilPortal&) = delete;
+    EvilPortal& operator=(const EvilPortal&) = delete;
 
     bool setup(void);
     void beginAP(void);
@@ -51,16 +53,16 @@ public:
 
 private:
     String apName = "Free Wifi";
-    uint8_t _channel;
-    bool _deauth;
+    uint8_t _channel = 6;
+    bool _deauth = false;
     bool isDeauthHeld = false;
-    bool _verifyPwd;
-    bool _autoMode;
-    bool _backgroundMode;
+    bool _verifyPwd = false;
+    bool _autoMode = false;
+    bool _backgroundMode = false;
     String _autoTemplateFile;
 
-    wifi_mode_t _originalWifiMode;
-    bool _wifiWasConnected;
+    wifi_mode_t _originalWifiMode = WIFI_OFF;
+    bool _wifiWasConnected = false;
 
     AsyncWebServer webServer;
 
@@ -72,7 +74,7 @@ private:
     String htmlPage;
     String htmlFileName;
     bool isDefaultHtml = true;
-    FS *fsHtmlFile;
+    FS *fsHtmlFile = nullptr;
 
     String lastCred;
     int totalCapturedCredentials = 0;

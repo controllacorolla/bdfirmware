@@ -35,6 +35,8 @@ public:
     TagOMatic();
     TagOMatic(RFID_State initial_state);
     ~TagOMatic();
+    TagOMatic(const TagOMatic&) = delete;
+    TagOMatic& operator=(const TagOMatic&) = delete;
 // Headless constructor
 #if !defined(LITE_VERSION) && !defined(DISABLE_INTERPRETER)
     TagOMatic(bool headless_mode);
@@ -58,11 +60,11 @@ public:
 
 private:
     RFIDInterface *_rfid = nullptr;
-    RFID_State _initial_state;
+    RFID_State _initial_state = READ_MODE;
     bool _read_uid = false;
     bool _ndef_created = false;
     uint32_t _lastReadTime = 0;
-    RFID_State current_state;
+    RFID_State current_state = READ_MODE;
     std::set<String> _scanned_set;
     std::vector<String> _scanned_tags;
     String _sourceUID;

@@ -12,7 +12,7 @@ public:
     void update_mtu(uint16_t mtu);
 
 private:
-    NimBLEServer *pServer;
+    NimBLEServer *pServer = nullptr;
     BatteryService battery_service;
     BLESerialService serial_service;
 };

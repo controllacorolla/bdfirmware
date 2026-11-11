@@ -3818,17 +3818,17 @@ void FastPairExploitEngine::generateRandomMac(uint8_t *mac) {
 // v3.1: BLE Sniffer - FIXED: Always init
 //=============================================================================
 
-struct SnifferPacket {
+struct BLESuiteSnifferPacket {
     String address;
     String name;
-    int rssi;
+    int rssi = 0;
     std::vector<uint8_t> payload;
     String payloadHex;
     String timestamp;
-    int channel;
+    int channel = 0;
 };
 
-static std::vector<SnifferPacket> snifferPackets;
+static std::vector<BLESuiteSnifferPacket> snifferPackets;
 static bool snifferRunning = false;
 static int snifferPacketCount = 0;
 
@@ -3943,7 +3943,7 @@ void BLE_Sniffer() {
 
             for (int i = 0; i < results.getCount(); i++) {
                 const NimBLEAdvertisedDevice *device = results.getDevice(i);
-                SnifferPacket packet;
+                BLESuiteSnifferPacket packet;
                 packet.address = String(device->getAddress().toString().c_str());
                 packet.name = String(device->getName().c_str());
                 if (packet.name.isEmpty()) packet.name = "Unknown";
@@ -3998,7 +3998,7 @@ void BLE_Sniffer() {
                     for (int i = 0; i < visibleItems && (scrollOffset + i) < snifferPacketCount && i < 5;
                          i++) {
                         int idx = scrollOffset + i;
-                        SnifferPacket &pkt = snifferPackets[idx];
+                        BLESuiteSnifferPacket &pkt = snifferPackets[idx];
                         bool selectedItem = (idx == selected);
                         uint16_t fg = selectedItem ? bruceConfig.bgColor : TFT_WHITE;
                         uint16_t bg = selectedItem ? bruceConfig.priColor : bruceConfig.bgColor;
@@ -4050,7 +4050,7 @@ void BLE_Sniffer() {
                     redraw = true; // view screen
                 }
                 if (check(SelPress)) {
-                    SnifferPacket &pkt = snifferPackets[selected];
+                    BLESuiteSnifferPacket &pkt = snifferPackets[selected];
 
                     drawMainBorderWithTitle("PACKET DETAILS");
                     int dy = BORDER_PAD_Y + FM * LH + 4;
@@ -4119,7 +4119,7 @@ void BLE_Sniffer() {
                     file.println("");
 
                     for (size_t i = 0; i < snifferPackets.size(); i++) {
-                        SnifferPacket &pkt = snifferPackets[i];
+                        BLESuiteSnifferPacket &pkt = snifferPackets[i];
                         file.printf(
                             "[%d] %s | %s | %d dBm | Ch:%d\n",
                             i + 1,

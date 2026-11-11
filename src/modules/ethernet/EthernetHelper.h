@@ -11,7 +11,7 @@
 
 class EthernetHelper {
 private:
-    uint8_t mac[6];
+    uint8_t mac[6]{};
     void generate_mac();
     SPIClass *ethSpi = nullptr;
     network_event_handle_t ethEventId = 0;

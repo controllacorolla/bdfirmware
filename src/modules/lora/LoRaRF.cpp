@@ -396,7 +396,11 @@ void lorachat() {
     }
     File file = LittleFS.open("/lora_settings.json", "r");
     JsonDocument doc;
-    deserializeJson(doc, file);
+    if (deserializeJson(doc, file) != DeserializationError::Ok) {
+        file.close();
+        displayError("LoRa settings corrupt", true);
+        return;
+    }
     displayName = doc["LoRa_Name"].as<String>();
     double BAND = doc["LoRa_Frequency"].as<String>().toDouble();
     file.close();
@@ -436,7 +440,10 @@ void changeusername() {
     if (username == "" || username == "\x1B") return;
     File file = LittleFS.open("/lora_settings.json", "r");
     JsonDocument doc;
-    deserializeJson(doc, file);
+    if (deserializeJson(doc, file) != DeserializationError::Ok) {
+        file.close();
+        return;
+    }
     file.close();
     doc["LoRa_Name"] = username;
     file = LittleFS.open("/lora_settings.json", "w");
@@ -449,7 +456,10 @@ void chfreq() {
     char buf[15];
     File file = LittleFS.open("/lora_settings.json", "r");
     JsonDocument doc;
-    deserializeJson(doc, file);
+    if (deserializeJson(doc, file) != DeserializationError::Ok) {
+        file.close();
+        return;
+    }
     file.close();
 
     double dfreq = doc["LoRa_Frequency"].as<String>().toDouble();
