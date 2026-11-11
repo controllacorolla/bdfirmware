@@ -528,12 +528,15 @@ void handleSMB1(uint8_t *pkt, uint32_t len) {
     }
     // ----------  SESSION SETUP ANDX (0x73) ----------
     if (command == 0x73) {                             // SMB_COM_SESSION_SETUP_ANDX
-        if (len < 47) return;                          // need the 2-byte AndXOffset at offset 45..46
-        uint16_t andxOffset = *(uint16_t *)(pkt + 45); // début des données NTLM
-        uint8_t *ntlm = pkt + andxOffset;
+        if (len < 35) return;                          // need at least WordCount + minimal params
+        uint8_t wordCount = pkt[32];
+        // Security blob starts after SMB header (32) + WordCount byte (1)
+        // + parameter words (wordCount*2) + ByteCount (2)
+        uint32_t blobOffset = 35 + (uint32_t)wordCount * 2;
+        if (blobOffset + 8 > len) return;              // need room for "NTLMSSP\0" + type
+        uint8_t *ntlm = pkt + blobOffset;
 
-        // Check the length bound BEFORE dereferencing ntlm (&& evaluates left→right)
-        if (len > (uint32_t)andxOffset + 8 && memcmp(ntlm, "NTLMSSP", 7) == 0) {
+        if (memcmp(ntlm, "NTLMSSP", 7) == 0) {
             uint8_t type = ntlm[8];
             if (type == 1) { // Type1 → envoyer challenge
                 Serial.println(F("NTLM Type 1 (SMB1) received"));

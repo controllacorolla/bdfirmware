@@ -227,7 +227,7 @@ int RFID2::load() {
         if (line.startsWith("UID:")) printableUID.uid = strData;
         if (line.startsWith("SAK:")) printableUID.sak = strData;
         if (line.startsWith("ATQA:")) printableUID.atqa = strData;
-        if (line.startsWith("Pages total:")) dataPages = strData.toInt();
+        if (line.startsWith("Pages total:")) { dataPages = strData.toInt(); totalPages = dataPages; }
         if (line.startsWith("Pages read:")) pageReadSuccess = false;
         if (line.startsWith("Page ")) strAllPages += line + "\n";
     }
@@ -337,6 +337,19 @@ void RFID2::parse_data() {
 
     printableUID.sak.trim();
     uid.sak = strtoul(printableUID.sak.c_str(), NULL, 16);
+
+    // Parse ATQA bytes so emulation/write-back uses the correct ATQA
+    String strAtqa = printableUID.atqa;
+    strAtqa.trim();
+    strAtqa.replace(" ", "");
+    uid.atqaByte[0] = 0;
+    uid.atqaByte[1] = 0;
+    if (strAtqa.length() >= 2) {
+        uid.atqaByte[0] = strtoul(strAtqa.substring(0, 2).c_str(), NULL, 16);
+    }
+    if (strAtqa.length() >= 4) {
+        uid.atqaByte[1] = strtoul(strAtqa.substring(2, 4).c_str(), NULL, 16);
+    }
 }
 
 int RFID2::read_data_blocks() {
@@ -499,7 +512,7 @@ int RFID2::authenticate_mifare_classic(byte block) {
             }
 
             statusB = mfrc522.PCD_Authenticate(
-                MFRC522::PICC_Command::PICC_CMD_MF_AUTH_KEY_A, block, &keyB, &mfrc522.uid
+                MFRC522::PICC_Command::PICC_CMD_MF_AUTH_KEY_B, block, &keyB, &mfrc522.uid
             );
             if (statusB == MFRC522::StatusCode::STATUS_OK) break;
 
@@ -585,7 +598,10 @@ int RFID2::write_data_blocks() {
             case MFRC522::PICC_Type::PICC_TYPE_MIFARE_MINI:
             case MFRC522::PICC_Type::PICC_TYPE_MIFARE_1K:
             case MFRC522::PICC_Type::PICC_TYPE_MIFARE_4K:
-                if (pageIndex == 0 || (pageIndex + 1) % 4 == 0) continue;
+                if (pageIndex == 0) continue;
+                // 4K cards: sectors 32-39 use 16-block groups (blocks 128-255)
+                if (pageIndex < 128) { if ((pageIndex + 1) % 4 == 0) continue; }
+                else { if ((pageIndex - 128 + 1) % 16 == 0) continue; }
                 blockWriteSuccess = write_mifare_classic_data_block(pageIndex, strBytes);
                 break;
 
@@ -644,14 +660,21 @@ int RFID2::erase_data_blocks() {
     switch (piccType) {
         case MFRC522::PICC_Type::PICC_TYPE_MIFARE_MINI:
         case MFRC522::PICC_Type::PICC_TYPE_MIFARE_1K:
-        case MFRC522::PICC_Type::PICC_TYPE_MIFARE_4K:
-            for (byte i = 1; i < 64; i++) {
-                if ((i + 1) % 4 == 0) continue;
+        case MFRC522::PICC_Type::PICC_TYPE_MIFARE_4K: {
+            // Mini=20 blocks, 1K=64 blocks, 4K=256 blocks
+            int maxBlock = (piccType == MFRC522::PICC_Type::PICC_TYPE_MIFARE_4K)  ? 256
+                         : (piccType == MFRC522::PICC_Type::PICC_TYPE_MIFARE_MINI) ? 20
+                                                                                    : 64;
+            for (int i = 1; i < maxBlock; i++) {
+                // 4K cards: sectors 32-39 use 16-block groups (blocks 128-255)
+                if (i < 128) { if ((i + 1) % 4 == 0) continue; }
+                else { if ((i - 128 + 1) % 16 == 0) continue; }
                 blockWriteSuccess =
                     write_mifare_classic_data_block(i, "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
                 if (!blockWriteSuccess) return FAILURE;
             }
             break;
+        }
 
         case MFRC522::PICC_Type::PICC_TYPE_MIFARE_UL:
             // NDEF stardard

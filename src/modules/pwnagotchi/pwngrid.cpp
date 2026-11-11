@@ -27,7 +27,7 @@ std::vector<pwngrid_peer> getPwngridPeers() { return pwngrid_peers; }
 void add_new_peer(JsonDocument &json, signed int rssi) {
     // Check if it exists in the list
     bool exists = false;
-    for (auto peer_list : pwngrid_peers) {
+    for (auto &peer_list : pwngrid_peers) {
         if (peer_list.identity == json["identity"].as<String>()) {
             exists = true;
             peer_list.last_ping = millis();
@@ -174,15 +174,13 @@ esp_err_t pwngridAdvertise(uint8_t channel, const String &face) {
 const int away_threshold = 120000;
 
 void checkPwngridGoneFriends() {
-    for (auto peer_list : pwngrid_peers) {
-        // Check if peer is away
-        int away_secs = peer_list.last_ping - millis();
-        if (away_secs > away_threshold) {
+    for (auto &peer_list : pwngrid_peers) {
+        unsigned long away_ms = millis() - peer_list.last_ping;
+        if (away_ms > (unsigned long)away_threshold) {
             peer_list.gone = true;
-            delete_peer_gone();
-            return;
         }
     }
+    delete_peer_gone();
 }
 
 signed int getPwngridClosestRssi() {

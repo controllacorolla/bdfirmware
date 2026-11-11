@@ -186,8 +186,7 @@ void reciveMessage() {
         rcvmsg = incoming;
         Serial.println("Recived:" + rcvmsg);
         File file = LittleFS.open("/chats.txt", "a");
-        file.println(rcvmsg);
-        file.close();
+        if (file) { file.println(rcvmsg); file.close(); }
         messages.push_back(rcvmsg);
         if (messages.size() > maxMessages) { scrollOffset = messages.size() - maxMessages; }
         update = true;
@@ -227,11 +226,13 @@ void render() {
 void loadMessages() {
     messages.clear();
     File file = LittleFS.open("/chats.txt", "r");
-    while (file.available()) {
-        String line = file.readStringUntil('\n');
-        messages.push_back(line);
+    if (file) {
+        while (file.available()) {
+            String line = file.readStringUntil('\n');
+            messages.push_back(line);
+        }
+        file.close();
     }
-    file.close();
     if (messages.size() > maxMessages) {
         scrollOffset = messages.size() - maxMessages;
     } else {
@@ -268,8 +269,7 @@ void sendmsg() {
     tft.fillScreen(TFT_BLACK);
     update = true;
     File file = LittleFS.open("/chats.txt", "a");
-    file.println(msg);
-    file.close();
+    if (file) { file.println(msg); file.close(); }
 
     messages.push_back(msg);
     if (messages.size() > maxMessages) { scrollOffset = messages.size() - maxMessages; }

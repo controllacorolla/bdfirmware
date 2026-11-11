@@ -89,6 +89,8 @@ void updateBLEJammer() {
             channels = bleAdvertisingChannels;
             channelCount = 3;
         } else if (currentMode == BLE_JAM_HOP_ALL) {
+            // Cycle through all 39 BLE channels: 0-35 data, 36-38 advertising
+            currentChannelIndex = (currentChannelIndex + 1) % 39;
             if (currentChannelIndex < 36) {
                 channels = bleDataChannels;
                 channelCount = 36;
@@ -98,8 +100,15 @@ void updateBLEJammer() {
             }
         }
         if (channels && channelCount > 0) {
-            currentChannelIndex = (currentChannelIndex + 1) % channelCount;
-            uint8_t ch = channels[currentChannelIndex];
+            uint8_t ch;
+            if (currentMode == BLE_JAM_HOP_ALL) {
+                // For HOP_ALL, index into the correct sub-array
+                ch = (currentChannelIndex < 36) ? bleDataChannels[currentChannelIndex]
+                                                 : bleAdvertisingChannels[currentChannelIndex - 36];
+            } else {
+                currentChannelIndex = (currentChannelIndex + 1) % channelCount;
+                ch = channels[currentChannelIndex];
+            }
             // FIX: Full power cycle required for reliable channel changes.
             // Bare setChannel() during active CW leaves the PLL in an
             // undefined state on many PA+LNA modules — carrier freezes

@@ -74,7 +74,7 @@ String getVendorFromMAC(const String &mac) {
         {"00:1C:42", "Cisco"    },
         {"00:1A:A0", "Cisco"    },
         {"00:0F:FE", "TP-Link"  },
-        {"00:1A:2B", "Netgear"  },
+        {"00:26:F2", "Netgear"  },
         {"00:18:4D", "Netgear"  },
         {"00:1F:33", "Asus"     },
         {"00:0D:88", "Microsoft"},
@@ -183,7 +183,7 @@ bool macCompare(const uint8_t *mac1, const uint8_t *mac2) {
 int getWiFiBand(int channel) {
     if (channel >= 1 && channel <= 14) return 0;
     else if (channel >= 36 && channel <= 165) return 1;
-    else if (channel >= 1 && channel <= 233) return 2;
+    else if (channel >= 166 && channel <= 233) return 2;
     return 0;
 }
 
@@ -202,9 +202,9 @@ void cacheSameSSIDAPs() {
             info.band = getWiFiBand(info.channel);
             info.is_5ghz = (info.band == 1 || info.band == 2);
             if (info.band == 1) {
-                info.frequency = 5000 + (info.channel - 36) * 20;
+                info.frequency = 5000 + info.channel * 5;
             } else if (info.band == 2) {
-                info.frequency = 6000 + (info.channel - 1) * 20;
+                info.frequency = 5950 + info.channel * 5;
             } else {
                 info.frequency = 2407 + info.channel * 5;
             }
@@ -272,8 +272,8 @@ void buildOptimizedDeauthFrame(
     memcpy(&frame[16], bssid, 6);
     static uint16_t seq = 0;
     seq = random(0, 4096);
-    frame[22] = (seq >> 4) & 0xFF;
-    frame[23] = ((seq & 0x0F) << 4);
+    frame[22] = ((seq & 0x0F) << 4);
+    frame[23] = (seq >> 4) & 0xFF;
     frame[24] = reason;
     frame[25] = 0x00;
 }
@@ -451,7 +451,7 @@ void stationDeauth(Host host, const uint8_t *apBssidIn) {
     NextPress = false;
     delay(100);
 
-    long tmp = millis();
+    unsigned long tmp = millis();
     int cont = 0;
     int total_frames = 0;
     uint8_t current_reason = 0;

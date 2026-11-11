@@ -551,7 +551,8 @@ struct KarmaRuntimeState {
     bool auto_hopping = true;
     uint16_t hop_interval = DEFAULT_HOP_INTERVAL;
     File probe_file;
-    RingbufHandle_t macRingBuffer = nullptr;
+    std::set<String> macCacheSet;
+    std::queue<String> macCacheQueue;
     String filen = "";
     std::vector<ProbeRequest> probeBuffer;
     uint16_t probeBufferIndex = 0;
@@ -602,10 +603,8 @@ struct KarmaRuntimeState {
             delete activePortal;
             activePortal = nullptr;
         }
-        if (macRingBuffer) {
-            vRingbufferDelete(macRingBuffer);
-            macRingBuffer = nullptr;
-        }
+        macCacheSet.clear();
+        while (!macCacheQueue.empty()) macCacheQueue.pop();
         if (karmaQueue) {
             vQueueDelete(karmaQueue);
             karmaQueue = nullptr;
@@ -723,7 +722,8 @@ static void destroyActivePortal() {
 #define auto_hopping (state().auto_hopping)
 #define hop_interval (state().hop_interval)
 #define _probe_file (state().probe_file)
-#define macRingBuffer (state().macRingBuffer)
+#define macCacheSet (state().macCacheSet)
+#define macCacheQueue (state().macCacheQueue)
 #define filen (state().filen)
 #define probeBuffer (state().probeBuffer)
 #define probeBufferIndex (state().probeBufferIndex)
@@ -857,31 +857,24 @@ String generateUniqueFilename(FS &fs, bool compressed) {
     return filename;
 }
 
-void initMACCache() { macRingBuffer = xRingbufferCreate(MAC_CACHE_SIZE * 18, RINGBUF_TYPE_NOSPLIT); }
+void initMACCache() {
+    macCacheSet.clear();
+    while (!macCacheQueue.empty()) macCacheQueue.pop();
+}
 
 bool isMACInCache(const String &mac) {
-    if (!macRingBuffer) return false;
-    size_t itemSize;
-    char *item = (char *)xRingbufferReceive(macRingBuffer, &itemSize, 0);
-    while (item) {
-        if (String(item) == mac) {
-            vRingbufferReturnItem(macRingBuffer, item);
-            return true;
-        }
-        vRingbufferReturnItem(macRingBuffer, item);
-        item = (char *)xRingbufferReceive(macRingBuffer, &itemSize, 0);
-    }
-    return false;
+    return macCacheSet.count(mac) > 0;
 }
 
 void addMACToCache(const String &mac) {
-    if (!macRingBuffer) return;
-    if (xRingbufferGetCurFreeSize(macRingBuffer) < mac.length() + 1) {
-        size_t itemSize;
-        char *oldItem = (char *)xRingbufferReceive(macRingBuffer, &itemSize, 0);
-        if (oldItem) vRingbufferReturnItem(macRingBuffer, oldItem);
+    if (macCacheSet.count(mac)) return; // Already present
+    // Evict oldest entry when cache is full
+    while (macCacheSet.size() >= MAC_CACHE_SIZE && !macCacheQueue.empty()) {
+        macCacheSet.erase(macCacheQueue.front());
+        macCacheQueue.pop();
     }
-    xRingbufferSend(macRingBuffer, mac.c_str(), mac.length() + 1, pdMS_TO_TICKS(100));
+    macCacheSet.insert(mac);
+    macCacheQueue.push(mac);
 }
 
 uint32_t generateClientFingerprint(const uint8_t *frame, int len) {
@@ -959,29 +952,47 @@ String extractMAC(const wifi_promiscuous_pkt_t *packet) {
 
 RSNInfo extractRSNInfo(const uint8_t *frame, int len) {
     RSNInfo rsn = {0, 0, 0, 0};
-    int pos = 24;
+    int pos = 24; // Start after minimum MAC header
     while (pos + 1 < len) {
         uint8_t tag = frame[pos];
         uint8_t tagLen = frame[pos + 1];
-        if (tag == 0x30 && tagLen >= 2) {
-            if (pos + 2 + tagLen <= len) {
-                rsn.version = (frame[pos + 2] << 8) | frame[pos + 3];
-                if (tagLen >= 3) { // the group-cipher byte at pos+4 must lie within the element
-                    uint8_t groupCipher = frame[pos + 4];
-                    if (groupCipher == 0x00) rsn.groupCipher = 1;
-                    else if (groupCipher == 0x02) rsn.groupCipher = 2;
-                }
-                if (tagLen > 6) {
-                    uint8_t pairwiseCipher = frame[pos + 8];
-                    if (pairwiseCipher == 0x00) rsn.pairwiseCipher = 1;
-                    else if (pairwiseCipher == 0x02) rsn.pairwiseCipher = 2;
-                }
-                if (tagLen > 12) {
-                    uint8_t akmSuite = frame[pos + 12];
-                    if (akmSuite == 0x00 || akmSuite == 0x02) rsn.akmSuite = 1;
-                    else if (akmSuite == 0x08) rsn.akmSuite = 2;
-                }
+        if (pos + 2 + tagLen > len) break; // Tag extends past packet
+        if (tag == 0x30 && tagLen >= 2) {  // RSN IE (0x30)
+            const uint8_t *ie = frame + pos + 2;
+            int off = 0;
+
+            // Version (2 bytes, little-endian)
+            rsn.version = ie[off] | (ie[off + 1] << 8);
+            off += 2;
+
+            // Group Data Cipher Suite (4 bytes: OUI[3] + suite type[1])
+            if (off + 4 > tagLen) break;
+            uint8_t gcType = ie[off + 3]; // Suite type after 3-byte OUI
+            if (gcType == 2) rsn.groupCipher = 2;       // TKIP
+            else if (gcType >= 1) rsn.groupCipher = 1;  // CCMP or other
+            off += 4;
+
+            // Pairwise Cipher Suite Count (2 bytes, LE) + suites
+            if (off + 2 > tagLen) break;
+            uint16_t pwCount = ie[off] | (ie[off + 1] << 8);
+            off += 2;
+            if (pwCount > 0 && off + 4 <= tagLen) {
+                uint8_t pwType = ie[off + 3]; // First suite's type byte
+                if (pwType == 2) rsn.pairwiseCipher = 2;       // TKIP
+                else if (pwType >= 1) rsn.pairwiseCipher = 1;  // CCMP or other
             }
+            off += pwCount * 4;
+
+            // AKM Suite Count (2 bytes, LE) + suites
+            if (off + 2 > tagLen) break;
+            uint16_t akmCount = ie[off] | (ie[off + 1] << 8);
+            off += 2;
+            if (akmCount > 0 && off + 4 <= tagLen) {
+                uint8_t akmType = ie[off + 3]; // First suite's type byte
+                if (akmType == 8) rsn.akmSuite = 2;       // SAE (WPA3)
+                else if (akmType >= 1) rsn.akmSuite = 1;  // PSK/802.1X (WPA2)
+            }
+            break; // Found RSN IE, done
         }
         pos += 2 + tagLen;
     }
@@ -996,7 +1007,7 @@ bool isEAPOL(const wifi_promiscuous_pkt_t *packet) {
         payload[28] == 0x00 && payload[29] == 0x00 && payload[30] == 0x88 && payload[31] == 0x8E) {
         return true;
     }
-    if ((payload[0] & 0x0F) == 0x08) {
+    if (payload[0] & 0x80) { // QoS data subtype (subtype bit 3 set)
         if (payload[26] == 0xAA && payload[27] == 0xAA && payload[28] == 0x03 && payload[29] == 0x00 &&
             payload[30] == 0x00 && payload[31] == 0x00 && payload[32] == 0x88 && payload[33] == 0x8E) {
             return true;
@@ -1007,7 +1018,7 @@ bool isEAPOL(const wifi_promiscuous_pkt_t *packet) {
 
 int classifyEAPOLMessage(const wifi_promiscuous_pkt_t *pkt) {
     const uint8_t *payload = pkt->payload;
-    int qosOffset = ((payload[0] & 0x0F) == 0x08) ? 2 : 0;
+    int qosOffset = (payload[0] & 0x80) ? 2 : 0;
     int keyInfoOffset = 24 + qosOffset + 8 + 4 + 1;
     if (pkt->rx_ctrl.sig_len < keyInfoOffset + 2) return -1;
     uint16_t keyInfo = (payload[keyInfoOffset] << 8) | payload[keyInfoOffset + 1];
@@ -1100,9 +1111,9 @@ AttackTier determineAttackTier(uint8_t priority) {
     return TIER_NONE;
 }
 
-uint16_t getPortalDuration(AttackTier tier) {
+uint32_t getPortalDuration(AttackTier tier) {
     switch (tier) {
-        case TIER_CLONE: return (uint16_t)attackConfig.cloneDuration;
+        case TIER_CLONE: return attackConfig.cloneDuration;
         case TIER_HIGH: return attackConfig.highTierDuration;
         case TIER_MEDIUM: return attackConfig.mediumTierDuration;
         case TIER_FAST: return attackConfig.fastTierDuration;
@@ -1283,10 +1294,9 @@ void sendBeaconFrameHelper(const String &ssid, uint8_t channel) {
     beaconPacket[pos++] = 0x00;
     memset(&beaconPacket[pos], 0xFF, 6);
     pos += 6;
-    uint8_t sourceMAC[6] = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC};
-    memcpy(&beaconPacket[pos], sourceMAC, 6);
+    memcpy(&beaconPacket[pos], currentBSSID, 6);
     pos += 6;
-    memcpy(&beaconPacket[pos], sourceMAC, 6);
+    memcpy(&beaconPacket[pos], currentBSSID, 6);
     pos += 6;
     beaconPacket[pos++] = 0x00;
     beaconPacket[pos++] = 0x00;
@@ -1684,7 +1694,7 @@ void checkCloneAttackOpportunities() {
                 portal.verifyPassword = selectedTemplate.verifyPassword;
                 portal.priority = 100;
                 portal.tier = TIER_CLONE;
-                portal.duration = (uint16_t)attackConfig.cloneDuration;
+                portal.duration = attackConfig.cloneDuration;
                 portal.isCloneAttack = true;
                 portal.probeCount = ssidPair.second;
                 enqueuePendingPortal(portal);
@@ -2247,8 +2257,26 @@ void saveHandshakeToFile(const HandshakeCapture &hs) {
     filename.replace(" ", "_");
     filename.replace("*", "");
 
+    bool isNewFile = !fs->exists(filename);
     File file = fs->open(filename, FILE_APPEND);
     if (file) {
+        // Write PCAP global header if this is a new file
+        if (isNewFile) {
+            uint32_t magic = 0xa1b2c3d4;
+            uint16_t version_major = 2;
+            uint16_t version_minor = 4;
+            int32_t thiszone = 0;
+            uint32_t sigfigs = 0;
+            uint32_t snaplen = 65535;
+            uint32_t network = 105; // IEEE 802.11
+            file.write((uint8_t *)&magic, 4);
+            file.write((uint8_t *)&version_major, 2);
+            file.write((uint8_t *)&version_minor, 2);
+            file.write((uint8_t *)&thiszone, 4);
+            file.write((uint8_t *)&sigfigs, 4);
+            file.write((uint8_t *)&snaplen, 4);
+            file.write((uint8_t *)&network, 4);
+        }
         uint32_t ts_sec = hs.timestamp / 1000;
         uint32_t ts_usec = (hs.timestamp % 1000) * 1000;
         file.write((uint8_t *)&ts_sec, 4);
@@ -2383,10 +2411,7 @@ void clearProbes() {
     destroyActivePortal();
 
     while (!responseQueue.empty()) responseQueue.pop();
-    if (macRingBuffer) {
-        vRingbufferDelete(macRingBuffer);
-        initMACCache();
-    }
+    initMACCache();
     for (int i = 0; i < MAX_PROBE_BUFFER; i++) {
         freeProbeFrame(probeBuffer[i]);
         probeBuffer[i].mac[0] = '\0';
@@ -2593,7 +2618,6 @@ void karma_setup() {
         probeBuffer[i].ssid[0] = '\0';
     }
 
-    if (macRingBuffer) vRingbufferDelete(macRingBuffer);
     initMACCache();
     pendingPortals.clear();
     activeNetworks.clear();
@@ -2707,10 +2731,7 @@ void karma_setup() {
             destroyActivePortal();
 
             while (!responseQueue.empty()) responseQueue.pop();
-            if (macRingBuffer) {
-                vRingbufferDelete(macRingBuffer);
-                macRingBuffer = NULL;
-            }
+            initMACCache();
             if (karmaQueue) {
                 vQueueDelete(karmaQueue);
                 karmaQueue = nullptr;

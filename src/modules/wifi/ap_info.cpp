@@ -46,7 +46,7 @@ String cypherType2String(wifi_cipher_type_t cipherType) {
 
 String phyModes2String(wifi_ap_record_t record) {
     String modes;
-    if (record.phy_11b || record.phy_11g || record.phy_11g || record.phy_11n) modes = "11";
+    if (record.phy_11b || record.phy_11g || record.phy_lr || record.phy_11n) modes = "11";
     if (record.phy_11b) modes += "b/";
     if (record.phy_11g) modes += "g/";
     if (record.phy_11n) modes += "n/";

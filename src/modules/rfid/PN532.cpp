@@ -762,12 +762,11 @@ int PN532::emulate() {
 
         if (ins == kInsSelectFile) {
             if (p1 == ApduCommand::C_APDU_P1_SELECT_BY_ID) {
-                if (p2 != 0x0C) {
-                    response = kSwOk;
-                } else if (
-                    lc == 2 && apdu.size() >= 7 && apdu[ApduCommand::C_APDU_DATA] == 0xE1 &&
+                if (lc == 2 && apdu.size() >= 7 && apdu[ApduCommand::C_APDU_DATA] == 0xE1 &&
                     (apdu[ApduCommand::C_APDU_DATA + 1] == 0x03 || apdu[ApduCommand::C_APDU_DATA + 1] == 0x04)
                 ) {
+                    // Track file selection regardless of P2 variant (0x0C = no FCI,
+                    // 0x00 = FCI requested). Both must update currentFile.
                     currentFile = (apdu[ApduCommand::C_APDU_DATA + 1] == 0x03) ? TagFile::CC : TagFile::NDEF;
                     response = kSwOk;
                 } else {
@@ -1330,7 +1329,10 @@ int PN532::write_data_blocks() {
                 case PICC_TYPE_MIFARE_MINI:
                 case PICC_TYPE_MIFARE_1K:
                 case PICC_TYPE_MIFARE_4K:
-                    if (pageIndex == 0 || (pageIndex + 1) % 4 == 0) continue;
+                    if (pageIndex == 0) continue;
+                    // 4K cards: sectors 32-39 use 16-block groups (blocks 128-255)
+                    if (pageIndex < 128) { if ((pageIndex + 1) % 4 == 0) continue; }
+                    else { if ((pageIndex - 128 + 1) % 16 == 0) continue; }
                     blockWriteSuccess = write_mifare_classic_data_block(pageIndex, strBytes);
                     break;
 
@@ -1410,14 +1412,21 @@ int PN532::erase_data_blocks() {
     switch (uid.sak) {
         case PICC_TYPE_MIFARE_MINI:
         case PICC_TYPE_MIFARE_1K:
-        case PICC_TYPE_MIFARE_4K:
-            for (byte i = 1; i < 64; i++) {
-                if ((i + 1) % 4 == 0) continue;
+        case PICC_TYPE_MIFARE_4K: {
+            // Mini=20 blocks, 1K=64 blocks, 4K=256 blocks
+            int maxBlock = (uid.sak == PICC_TYPE_MIFARE_4K)  ? 256
+                         : (uid.sak == PICC_TYPE_MIFARE_MINI) ? 20
+                                                               : 64;
+            for (int i = 1; i < maxBlock; i++) {
+                // 4K cards: sectors 32-39 use 16-block groups (blocks 128-255)
+                if (i < 128) { if ((i + 1) % 4 == 0) continue; }
+                else { if ((i - 128 + 1) % 16 == 0) continue; }
                 blockWriteSuccess =
                     write_mifare_classic_data_block(i, "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00");
                 if (!blockWriteSuccess) return FAILURE;
             }
             break;
+        }
 
         case PICC_TYPE_MIFARE_UL:
             // NDEF stardard

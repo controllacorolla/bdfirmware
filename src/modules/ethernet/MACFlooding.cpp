@@ -113,9 +113,8 @@ void MACFlooding::prepare_packet_hdr() {
     };
     memcpy(&ipv4_pkt.dest.addr, dst_ip, 4);
 
-    ipv4_pkt._chksum = htons(
-        calculate_ip_checksum()
-    ); // Since we change ip src and dst everytime, recalculate CRC of IP header
+    ipv4_pkt._chksum = 0;
+    ipv4_pkt._chksum = calculate_ip_checksum();
 }
 
 // Surgically change ethernet frame to include new mac address
@@ -165,6 +164,11 @@ void MACFlooding::send_packet() {
 
     uint8_t *ethernet_frame = (uint8_t *)p->payload;
     change_mac_in_packet();
+
+    // Randomize IP src/dst and recalculate checksum each packet so
+    // switches see unique flows, not the same IP pair with different MACs
+    prepare_packet_hdr();
+    memcpy(ethernet_frame + SIZEOF_ETH_HDR, &ipv4_pkt, IP_HLEN);
 
     // Send packet
     netif->linkoutput(netif, p);

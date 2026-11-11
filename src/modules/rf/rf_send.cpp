@@ -16,7 +16,7 @@ std::vector<int> bitRawList;
 std::vector<uint64_t> keyList;
 std::vector<String> rawDataList;
 
-uint16_t num_steps_keeloq = 1;
+int16_t num_steps_keeloq = 1;
 uint8_t num_signal_repeat = 4;
 String filepath = "";
 FS *filesystem = NULL;

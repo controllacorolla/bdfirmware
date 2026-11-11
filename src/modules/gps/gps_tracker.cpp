@@ -101,7 +101,7 @@ void GPSTracker::loop() {
             count++;
         }
 
-        int tmp = millis();
+        unsigned long tmp = millis();
         while (millis() - tmp < MAX_WAIT && !gps.location.isUpdated()) {
             if (check(EscPress) || returnToMenu) return end();
             vTaskDelay(pdMS_TO_TICKS(1));

@@ -368,7 +368,7 @@ void Wardriving::scanWiFiBLE() {
                 if (device->haveManufacturerData()) {
                     std::string mfgData = device->getManufacturerData();
                     if (!mfgData.empty() && mfgData.length() >= 2) {
-                        manufacturerId = (uint16_t(mfgData[1]) << 8) | uint16_t(mfgData[0]);
+                        manufacturerId = (uint16_t(uint8_t(mfgData[1])) << 8) | uint16_t(uint8_t(mfgData[0]));
                     }
                 }
             } catch (...) { continue; }

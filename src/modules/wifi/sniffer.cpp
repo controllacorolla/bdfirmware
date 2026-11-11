@@ -238,7 +238,7 @@ bool isItEAPOL(const wifi_promiscuous_pkt_t *packet) {
 
     // handle QoS tagging which shifts the start of the LLC/SNAP headers by 2 bytes
     // check if the frame control field's subtype indicates a QoS data subtype (0x08)
-    if ((payload[0] & 0x0F) == 0x08) {
+    if (payload[0] & 0x80) { // QoS data subtype (subtype bit 3 set)
         // Adjust for the QoS Control field and recheck for LLC/SNAP header
         if (payload[26] == 0xAA && payload[27] == 0xAA && payload[28] == 0x03 && payload[29] == 0x00 &&
             payload[30] == 0x00 && payload[31] == 0x00 && payload[32] == 0x88 && payload[33] == 0x8E) {
@@ -257,7 +257,7 @@ bool handshakeUsable(const HandshakeTracker &hs) { return hs.msg1 && hs.msg2 && 
 int classifyEapolMessage(const wifi_promiscuous_pkt_t *pkt) {
     const uint8_t *payload = pkt->payload;
     // QoS frames add 2 bytes to MAC header
-    int qosOffset = ((payload[0] & 0x0F) == 0x08) ? 2 : 0;
+    int qosOffset = (payload[0] & 0x80) ? 2 : 0;
 
     // Offset to Key Information field:
     // MAC header (24 + qosOffset) + LLC/SNAP (8) + EAPOL header (4) + Descriptor Type (1)
