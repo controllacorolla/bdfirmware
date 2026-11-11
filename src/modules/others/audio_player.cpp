@@ -12,26 +12,26 @@
 enum IconType { ICON_PREV, ICON_PLAY, ICON_PAUSE, ICON_NEXT, ICON_VOL, ICON_LOOP_ON, ICON_LOOP_OFF };
 
 struct PlayerState {
-    bool isPlaying;
-    bool isPaused;
-    bool loopEnabled;
+    bool isPlaying = false;
+    bool isPaused = false;
+    bool loopEnabled = false;
     String filename;
-    unsigned long lastUpdate;
-    int scrollOffset;
-    unsigned long lastPauseAction;
+    unsigned long lastUpdate = 0;
+    int scrollOffset = 0;
+    unsigned long lastPauseAction = 0;
 };
 
 struct UILayout {
-    int MARGIN_X;
-    int MARGIN_Y;
-    int HEADER_HEIGHT;
-    int DISPLAY_HEIGHT;
-    int PROGRESS_HEIGHT;
-    int CONTROLS_HEIGHT;
-    int BUTTON_SIZE;
-    int BUTTON_SPACING;
-    int TEXT_SIZE_LARGE;
-    int TEXT_SIZE_SMALL;
+    int MARGIN_X = 0;
+    int MARGIN_Y = 0;
+    int HEADER_HEIGHT = 0;
+    int DISPLAY_HEIGHT = 0;
+    int PROGRESS_HEIGHT = 0;
+    int CONTROLS_HEIGHT = 0;
+    int BUTTON_SIZE = 0;
+    int BUTTON_SPACING = 0;
+    int TEXT_SIZE_LARGE = 0;
+    int TEXT_SIZE_SMALL = 0;
 
     void calculate() {
         bool isLarge = (tftWidth > 200 && tftHeight > 200);

@@ -149,6 +149,8 @@ public:
     HostInfo();
     HostInfo(const Host &host, bool wifi);
     ~HostInfo();
+    HostInfo(const HostInfo &) = delete;
+    HostInfo &operator=(const HostInfo &) = delete;
 };
 
 #endif

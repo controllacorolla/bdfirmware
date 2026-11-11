@@ -141,10 +141,10 @@ bool Wigle::upload_all(FS *fs, const String &folder, bool auto_delete) {
 
     display_banner();
 
+    if (!fs || !get_user()) return false;
+
     File root = fs->open(folder);
     if (!root || !root.isDirectory()) return false;
-
-    if (!fs || !get_user()) return false;
 
     dump_wigle_info();
     int i = 1;

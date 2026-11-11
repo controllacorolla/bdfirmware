@@ -109,6 +109,8 @@ struct ScannerData {
 
     ScannerData();
     ~ScannerData();
+    ScannerData(const ScannerData &) = delete;
+    ScannerData &operator=(const ScannerData &) = delete;
     void
     addDevice(const String &name, const String &address, int rssi, bool fastPair, bool hasHFP, uint8_t type);
     void clear();
@@ -409,8 +411,8 @@ private:
     struct PairedDevice {
         String name;
         String address;
-        uint8_t linkKey[16];
-        unsigned long bondedAt;
+        uint8_t linkKey[16]{};
+        unsigned long bondedAt = 0;
     };
     std::vector<PairedDevice> knownDevices;
 
@@ -453,7 +455,7 @@ class VulnerabilityScanner {
 private:
     struct VulnCheck {
         String name;
-        bool (*checkFunction)(NimBLEAddress);
+        bool (*checkFunction)(NimBLEAddress) = nullptr;
         String description;
     };
     std::vector<VulnCheck> vulnerabilityChecks;

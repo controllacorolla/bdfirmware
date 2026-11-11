@@ -457,10 +457,11 @@ static void mj_sendKeystroke(const MjTarget &target, uint8_t modifier, uint8_t k
     if (target.type == MJ_DEVICE_MICROSOFT || target.type == MJ_DEVICE_MS_CRYPT) {
         mj_msTransmit(target, modifier, keycode);
     } else if (target.type == MJ_DEVICE_LOGITECH) {
-        mj_logTransmit(target, modifier, &keycode, 1);
+        uint8_t keyBuf[1] = {keycode};
+        mj_logTransmit(target, modifier, keyBuf, 1);
         delay(ATTACK_INTER_KEY_MS);
-        uint8_t none = MJ_KEY_NONE;
-        mj_logTransmit(target, MJ_MOD_NONE, &none, 1);
+        uint8_t noneBuf[1] = {MJ_KEY_NONE};
+        mj_logTransmit(target, MJ_MOD_NONE, noneBuf, 1);
     }
 }
 

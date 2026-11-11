@@ -1329,7 +1329,6 @@ int PN532::write_data_blocks() {
                 case PICC_TYPE_MIFARE_MINI:
                 case PICC_TYPE_MIFARE_1K:
                 case PICC_TYPE_MIFARE_4K:
-                    if (pageIndex == 0) continue;
                     // 4K cards: sectors 32-39 use 16-block groups (blocks 128-255)
                     if (pageIndex < 128) { if ((pageIndex + 1) % 4 == 0) continue; }
                     else { if ((pageIndex - 128 + 1) % 16 == 0) continue; }

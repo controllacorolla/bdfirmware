@@ -991,9 +991,10 @@ void Pn532ble::hf15WriteDumpMode() {
             return;
         }
 
-        for (uint8_t i = 0; i < tagInfo.blockSize; i++) {
-            if ((size_t)(i * 4 + 4) > iso15dump.size()) break; // not enough data for this block
-            std::vector<uint8_t> data(iso15dump.begin() + i * 4, iso15dump.begin() + i * 4 + 4);
+        for (uint16_t i = 0; i < tagInfo.blockSize; i++) {
+            size_t offset = (size_t)i * 4;
+            if (offset + 4 > iso15dump.size()) break;
+            std::vector<uint8_t> data(iso15dump.begin() + offset, iso15dump.begin() + offset + 4);
             bool writeResult = pn532_ble.hf15Wrbl(i, data);
             if (writeResult) {
                 area.addLine("Block " + String(i) + " write success");

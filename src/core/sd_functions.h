@@ -8,8 +8,8 @@
 
 struct FileList {
     String filename;
-    bool folder;
-    bool operation;
+    bool folder = false;
+    bool operation = false;
 };
 
 // extern SPIClass sdcardSPI;

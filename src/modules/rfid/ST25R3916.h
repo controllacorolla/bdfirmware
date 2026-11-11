@@ -89,7 +89,7 @@ private:
     bool _writeMagicGen2UID(rfalNfcDevice *dev);
 
     // MIFARE Classic (Crypto1) — Milestone 5
-    Crypto1State _mfcCipher;
+    Crypto1State _mfcCipher{};
     bool _mfcAuthed = false;
     int _readMifareClassic(rfalNfcDevice *dev);
     uint32_t _mfcUid32() const;
@@ -141,7 +141,7 @@ private:
 
     // MIFARE Classic emulation (listener-side Crypto1) — Milestone 5
     bool _emuIsMfc = false;
-    Crypto1State _emuCipher;
+    Crypto1State _emuCipher{};
     bool _emuMfcAuthed = false;
     uint32_t _emuNt = 0;
     void _emuParityOff(); // restore HW parity (TX+RX) after an encrypted session

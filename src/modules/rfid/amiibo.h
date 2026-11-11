@@ -41,7 +41,7 @@ public:
 
 private:
     Amiibolink amiibolink = Amiibolink(true);
-    AppMode currentMode;
+    AppMode currentMode = START_MODE;
     PrintableUID printableUID;
     String strDump = "";
 

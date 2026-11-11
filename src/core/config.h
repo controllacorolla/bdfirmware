@@ -28,9 +28,9 @@ public:
     struct EvilPortalEndpoints {
         String getCredsEndpoint;
         String setSsidEndpoint;
-        bool showEndpoints;
-        bool allowSetSsid;
-        bool allowGetCreds;
+        bool showEndpoints = false;
+        bool allowSetSsid = false;
+        bool allowGetCreds = false;
     };
 
     const char *filepath = "/bruce.conf";

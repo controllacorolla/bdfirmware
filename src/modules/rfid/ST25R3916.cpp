@@ -1139,7 +1139,7 @@ int ST25R3916::_handleListenLoop(uint32_t timeoutMs) {
                 } else if (cmd == 0x3A && n >= 3) { // FAST_READ start..end (até 64 páginas/256 B)
                     uint8_t start = fifo[1], end = fifo[2];
                     if (end >= start && (uint16_t)((end - start + 1) * 4) <= 256) {
-                        uint8_t resp[256];
+                        uint8_t resp[256]{};
                         uint16_t rl = 0;
                         for (int p = start; p <= end; p++) {
                             int pp = (_emuPageCount > 0) ? (p % _emuPageCount) : p;

@@ -4,6 +4,7 @@
 JSValue native_math_acosh(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
     double x = 0;
     if (argc > 0 && JS_IsNumber(ctx, argv[0])) JS_ToNumber(ctx, &x, argv[0]);
+    if (x < 1.0) return JS_NewFloat64(ctx, NAN);
     return JS_NewFloat64(ctx, acosh(x));
 }
 

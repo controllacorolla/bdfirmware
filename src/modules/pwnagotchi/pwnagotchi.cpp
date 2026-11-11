@@ -79,13 +79,13 @@ static int countBeaconsOnChannel(uint8_t channel) {
 // State machine context
 // ---------------------------------------------------------------------------
 struct BruceState {
-    BrucePhase phase;
-    uint32_t phaseStart;
-    uint32_t lastAdvertise;
-    uint8_t reconIdx;
-    uint8_t interactIdx;
-    bool didDeauth;
-    int prevHS;
+    BrucePhase phase = BrucePhase::RECON;
+    uint32_t phaseStart = 0;
+    uint32_t lastAdvertise = 0;
+    uint8_t reconIdx = 0;
+    uint8_t interactIdx = 0;
+    bool didDeauth = false;
+    int prevHS = 0;
     std::vector<uint8_t> sortedChannels;
     std::map<uint64_t, uint8_t> apDeauthCount;
 };

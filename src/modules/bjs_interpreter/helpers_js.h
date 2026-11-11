@@ -19,10 +19,10 @@ JSValue js_fill(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv);
 }
 
 struct FileParamsJS {
-    FS *fs;
+    FS *fs = nullptr;
     String path;
-    bool exist;
-    u_int8_t paramOffset;
+    bool exist = false;
+    u_int8_t paramOffset = 0;
 };
 FileParamsJS
 js_get_path_from_params(JSContext *ctx, JSValue *argv, bool checkIfexist = true, bool legacy = false);

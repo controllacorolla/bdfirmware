@@ -27,12 +27,12 @@ JSValue js_load(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
 
 /* timers */
 typedef struct {
-    bool allocated;
-    JSGCRef func;
-    int64_t timeout;     /* next due time in ms */
-    int32_t interval_ms; /* period for intervals */
-    bool repeat;
-    bool main;
+    bool allocated = false;
+    JSGCRef func{};
+    int64_t timeout = 0;     /* next due time in ms */
+    int32_t interval_ms = 0; /* period for intervals */
+    bool repeat = false;
+    bool main = false;
 } JSTimer;
 
 #define MAX_TIMERS 16
