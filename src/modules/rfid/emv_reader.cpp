@@ -272,59 +272,56 @@ std::vector<uint8_t> EMVReader::emv_read_record(uint8_t p1, uint8_t p2) {
 }
 
 void EMVReader::read_afl(EMVCard *card, std::vector<uint8_t> *afl) {
-    for (size_t i = 0; i + 2 < afl->size(); i += 4) { // need at(i), at(i+1), at(i+2)
+    for (size_t i = 0; i + 3 < afl->size(); i += 4) { // AFL entries are 4 bytes
         uint8_t sfi = (afl->at(i) >> 3); // Get SFI from AFL entry
         uint8_t record_start = afl->at(i + 1);
         uint8_t record_end = afl->at(i + 2);
 
-        std::vector<uint8_t> afl_content = emv_read_record(record_start, (sfi << 3) | 0b00000100);
-        if (!afl_content.empty()) {
+        // EMV AFL says to read all records from record_start to record_end inclusive.
+        for (uint8_t rec = record_start; rec <= record_end; rec++) {
+            std::vector<uint8_t> afl_content = emv_read_record(rec, (sfi << 3) | 0b00000100);
+            if (afl_content.empty()) {
+                Serial.println("Can't read AFL record");
+                continue;
+            }
+
             BerTlv Tlv;
             Tlv.SetTlv(afl_content);
             std::vector<uint8_t> container;
-            if (Tlv.GetValue("5A", &container) !=
-                OK) { // Get PAN(Credit Card Number). If TLV is corrupted(happens often with PN532) fallback
-                      // to a workaround to find information
+            if (Tlv.GetValue("5A", &container) != OK) {
+                // TLV parse failed -- try raw byte-scan workaround
                 parse_pan(&afl_content, card);
                 parse_validfrom(&afl_content, card);
                 parse_validto(&afl_content, card);
-                Serial.println("PAN parsed with workaround");
-                return;
-            } else {
-                // card->pan/validfrom/validto start as nullptr — allocate before copying
-                // (the mallocs below line 300 are unreachable dead code after the return).
-                card->pan = (uint8_t *)malloc(container.size());
-                if (card->pan) {
-                    memcpy(card->pan, container.data(), container.size());
-                    card->pan_len = container.size();
+                if (card->pan != nullptr) {
+                    Serial.println("PAN parsed with workaround");
+                    return;
                 }
-                container.clear();
-                if (Tlv.GetValue("5F25", &container) != OK) { // Get ValidFrom date
-                    parse_validfrom(&afl_content, card);
-                    parse_validto(&afl_content, card);
-                } else {
-                    card->validfrom = (uint8_t *)malloc(container.size());
-                    if (card->validfrom) memcpy(card->validfrom, container.data(), container.size());
-                    if (Tlv.GetValue("5F24", &container) != OK) { // Get ValidTo date
-                        parse_validto(&afl_content, card);
-                    } else {
-                        card->validto = (uint8_t *)malloc(container.size());
-                        if (card->validto) memcpy(card->validto, container.data(), container.size());
-                    }
-                }
-                Serial.println("PAN parsed without workaround");
-                return;
+                continue; // PAN not in this record, try next
             }
 
-            if (Tlv.GetValue("5A", &container) == OK) { // Get PAN(Credit Card Number)
-                card->pan = (uint8_t *)malloc(container.size());
-                memcpy(card->pan, container.data(), container.size()); // Copy data from TLV to struct
+            // Got PAN via proper TLV
+            card->pan = (uint8_t *)malloc(container.size());
+            if (card->pan) {
+                memcpy(card->pan, container.data(), container.size());
                 card->pan_len = container.size();
-                Serial.println("PAN parsed without workaround");
-                return;
             }
-        } else {
-            Serial.println("Can't parse AFL data for P2");
+            container.clear();
+            if (Tlv.GetValue("5F25", &container) != OK) { // Get ValidFrom date
+                parse_validfrom(&afl_content, card);
+                parse_validto(&afl_content, card);
+            } else {
+                card->validfrom = (uint8_t *)malloc(container.size());
+                if (card->validfrom) memcpy(card->validfrom, container.data(), container.size());
+                if (Tlv.GetValue("5F24", &container) != OK) { // Get ValidTo date
+                    parse_validto(&afl_content, card);
+                } else {
+                    card->validto = (uint8_t *)malloc(container.size());
+                    if (card->validto) memcpy(card->validto, container.data(), container.size());
+                }
+            }
+            Serial.println("PAN parsed without workaround");
+            return;
         }
     }
 }

@@ -75,7 +75,7 @@ static String parseManufacturerData(const std::vector<uint8_t> &payload) {
                 info += " Model: 0x" + String(modelId, HEX);
             }
             break;
-        case 0x0600: info += "(Microsoft)"; break;
+        case 0x0006: info += "(Microsoft)"; break;
         default: info += "(Unknown)";
     }
     return info;
