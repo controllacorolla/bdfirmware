@@ -24,6 +24,7 @@ void BLE_API::setup() {
     NimBLEDevice::setPower(ESP_PWR_LVL_P9); // 9 dBm, tweak if you want
 
     pServer = NimBLEDevice::createServer();
+    if (!pServer) return;
     pServer->advertiseOnDisconnect(true);
     pServer->setCallbacks(new BLEAPICallback(this));
 

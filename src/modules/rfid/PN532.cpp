@@ -1129,7 +1129,8 @@ int PN532::authenticate_mifare_classic(byte block) {
         uint8_t keyA[6];
 
         for (const auto &mifKey : bruceConfig.mifareKeys) {
-            for (size_t i = 0; i < mifKey.length(); i += 2) {
+            if (mifKey.length() != 12) continue;
+            for (size_t i = 0; i < 12; i += 2) {
                 keyA[i / 2] = strtoul(mifKey.substring(i, i + 2).c_str(), NULL, 16);
             }
 
@@ -1356,10 +1357,9 @@ int PN532::write_data_blocks() {
 
 bool PN532::write_mifare_classic_data_block(int block, String data) {
     data.replace(" ", "");
-    byte size = data.length() / 2;
-    byte buffer[size];
-
+    size_t size = data.length() / 2;
     if (size != 16) return false;
+    byte buffer[16];
 
     for (size_t i = 0; i < data.length(); i += 2) {
         buffer[i / 2] = strtoul(data.substring(i, i + 2).c_str(), NULL, 16);
@@ -1372,10 +1372,9 @@ bool PN532::write_mifare_classic_data_block(int block, String data) {
 
 bool PN532::write_mifare_ultralight_data_block(int block, String data) {
     data.replace(" ", "");
-    byte size = data.length() / 2;
-    byte buffer[size];
-
+    size_t size = data.length() / 2;
     if (size != 4) return false;
+    byte buffer[4];
 
     for (size_t i = 0; i < data.length(); i += 2) {
         buffer[i / 2] = strtoul(data.substring(i, i + 2).c_str(), NULL, 16);
@@ -1386,13 +1385,13 @@ bool PN532::write_mifare_ultralight_data_block(int block, String data) {
 
 int PN532::write_felica_data_block(int block, String data) {
     data.replace(" ", "");
-    byte size = data.length() / 2;
+    size_t size = data.length() / 2;
     uint8_t block_data[1][16] = {0};
 
     if (size != 16) { return false; }
 
-    for (size_t i = 0; i < data.length(); i += 2) {
-        block_data[0][i / 2] = strtoul(data.substring(i, i + 2).c_str(), NULL, 16);
+    for (size_t i = 0; i < 16; i++) {
+        block_data[0][i] = strtoul(data.substring(i * 2, i * 2 + 2).c_str(), NULL, 16);
     }
 
     uint16_t block_list[1] = {(uint16_t)(block +
@@ -1465,8 +1464,9 @@ int PN532::write_ndef_blocks() {
         return SUCCESS;
     }
 
-    byte ndef_size = ndefMessage.messageSize + 3;
-    byte payload_size = ndef_size % 4 == 0 ? ndef_size : ndef_size + (4 - (ndef_size % 4));
+    uint16_t ndef_size = (uint16_t)ndefMessage.messageSize + 3;
+    uint16_t payload_size = ndef_size % 4 == 0 ? ndef_size : ndef_size + (4 - (ndef_size % 4));
+    if (payload_size > 888) return FAILURE;
     byte ndef_payload[payload_size];
     byte i;
     bool blockWriteSuccess;

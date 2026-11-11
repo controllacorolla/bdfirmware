@@ -874,6 +874,7 @@ bool Chameleon::writeHFDataBlocks() {
 
     while (strAllPages.length() > 0) {
         lineBreakIndex = strAllPages.indexOf("\n");
+        if (lineBreakIndex < 0) lineBreakIndex = strAllPages.length();
         pageLine = strAllPages.substring(0, lineBreakIndex);
         strAllPages = strAllPages.substring(lineBreakIndex + 1);
 
@@ -884,10 +885,11 @@ bool Chameleon::writeHFDataBlocks() {
 
         if (pageIndex == 0) continue;
 
-        byte size = strBytes.length() / 2;
-        byte buffer[size];
-        for (size_t i = 0; i < strBytes.length(); i += 2) {
-            buffer[i / 2] = strtoul(strBytes.substring(i, i + 2).c_str(), NULL, 16);
+        size_t size = strBytes.length() / 2;
+        if (size == 0 || size > 16) continue;
+        byte buffer[16];
+        for (size_t i = 0; i < size; i++) {
+            buffer[i] = strtoul(strBytes.substring(i * 2, i * 2 + 2).c_str(), NULL, 16);
         }
 
         blockWriteSuccess = false;

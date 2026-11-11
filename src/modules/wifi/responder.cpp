@@ -533,7 +533,7 @@ void handleSMB1(uint8_t *pkt, uint32_t len) {
         // Security blob starts after SMB header (32) + WordCount byte (1)
         // + parameter words (wordCount*2) + ByteCount (2)
         uint32_t blobOffset = 35 + (uint32_t)wordCount * 2;
-        if (blobOffset + 8 > len) return;              // need room for "NTLMSSP\0" + type
+        if (blobOffset + 9 > len) return;              // need room for "NTLMSSP\0" + type byte
         uint8_t *ntlm = pkt + blobOffset;
 
         if (memcmp(ntlm, "NTLMSSP", 7) == 0) {
@@ -594,13 +594,13 @@ void responder() {
 
     netbiosname_str = keyboard("Bruce", 20);
     if (netbiosname_str == "\x1B") return;
-    netbiosName = stringTochar(netbiosname_str);
     netbiosdomain_str = keyboard("BRUCEGROUP", 20);
     if (netbiosdomain_str == "\x1B") return;
-    netbiosDomain = stringTochar(netbiosdomain_str);
     dnsdomain_str = keyboard("Bruce.Local", 20);
     if (dnsdomain_str == "\x1B") return;
-    dnsDomain = stringTochar(dnsdomain_str);
+    netbiosName = netbiosname_str.c_str();
+    netbiosDomain = netbiosdomain_str.c_str();
+    dnsDomain = dnsdomain_str.c_str();
 
     drawMainBorderWithTitle("RESPONDER"); // draw again after keyboard
     tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
@@ -840,6 +840,9 @@ void responder() {
                     uint32_t smbLength = ((uint32_t)nbss[1] << 16) | ((uint32_t)nbss[2] << 8) | nbss[3];
                     if (smbLength == 0) {
                         // Keep-alive ou paquet vide, on ignore
+                    } else if (smbLength > 65535) {
+                        smbState.client.stop();
+                        smbState.active = false;
                     } else {
                         // Lire le paquet SMB complet
                         uint8_t *packet = (uint8_t *)malloc(smbLength);
@@ -858,7 +861,7 @@ void responder() {
                                         Serial.println(F("Requête SMB2 Negotiate receivede."));
                                         // Construire et envoyer la réponse SMB2 Negotiate (sélection SMB2.1)
                                         // Copier l'en-tête du client pour le renvoyer modifié
-                                        uint8_t resp[128];
+                                        uint8_t resp[136];
                                         // NetBIOS header
                                         resp[0] = 0x00;
                                         // On remplira la longueur plus tard

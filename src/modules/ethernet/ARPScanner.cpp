@@ -88,7 +88,7 @@ void ARPScanner::readArpTableETH(netif *iface) {
 #include "lwip/tcpip.h"
 #include "ping/ping_sock.h"
 
-bool wait_ping = true;
+static volatile bool wait_ping = true;
 
 static void ping_cb(esp_ping_handle_t hdl, void *args) {
     // Turn on just for debug
@@ -213,6 +213,7 @@ void ARPScanner::setup() {
         ip_addr_t target;
         target.type = IPADDR_TYPE_V4;
         target.u_addr.ip4.addr = gateway;
+        wait_ping = true;
         ping_target(target); // Ping target to force ARP request
 
         while (wait_ping) { delay(1); }

@@ -160,8 +160,8 @@ struct keyStroke { // DO NOT CHANGE IT!!!!!
 
 struct TouchPoint {
     bool pressed = false;
-    uint16_t x;
-    uint16_t y;
+    uint16_t x = 0;
+    uint16_t y = 0;
 
     // clear touch to better handle tasks
     void Clear(void) {

@@ -100,9 +100,10 @@ std::vector<uint8_t> Ndef::urlNdefAbbrv(std::string url) {
 
 std::vector<uint8_t> Ndef::newMessage(std::vector<uint8_t> ndef) {
     std::vector<uint8_t> message;
-    message.push_back(0xD1); // NDEF record header
+    if (ndef.size() > 255) ndef.resize(255);
+    message.push_back(0xD1); // NDEF record header (SR=1, short record)
     message.push_back(TNF_WELL_KNOWN);
-    message.push_back(ndef.size());
+    message.push_back(static_cast<uint8_t>(ndef.size()));
     message.push_back(RTD_URI);
     message.insert(message.end(), ndef.begin(), ndef.end());
     return message;

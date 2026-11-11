@@ -23,8 +23,7 @@ void EMVReader::setup() {
 
     displayInfo("Waiting for EMV card...");
     EMVCard card = read_emv_card();
-    if (_cancelled) return;
-    display_emv(card);
+    if (!_cancelled) display_emv(card);
 
     free(card.pan);
     free(card.validfrom);
@@ -353,6 +352,7 @@ EMVCard EMVReader::read_emv_card() {
     } else {
         // Copy AID to result card
         res.aid = (uint8_t *)malloc(aid.size());
+        if (!res.aid) return res;
         memcpy(res.aid, aid.data(), aid.size());
 
         // Initialize Application Process

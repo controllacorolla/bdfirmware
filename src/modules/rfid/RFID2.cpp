@@ -481,7 +481,8 @@ int RFID2::authenticate_mifare_classic(byte block) {
 
     if (statusA != MFRC522::StatusCode::STATUS_OK) {
         for (const auto &mifKey : bruceConfig.mifareKeys) {
-            for (size_t i = 0; i < mifKey.length(); i += 2) {
+            if (mifKey.length() != 12) continue;
+            for (size_t i = 0; i < 12; i += 2) {
                 keyA.keyByte[i / 2] = strtoul(mifKey.substring(i, i + 2).c_str(), NULL, 16);
             }
 
@@ -622,11 +623,12 @@ int RFID2::write_data_blocks() {
 
 bool RFID2::write_mifare_classic_data_block(int block, String data) {
     data.replace(" ", "");
-    byte size = data.length() / 2;
-    byte buffer[size];
+    size_t size = data.length() / 2;
+    if (size == 0 || size > 16) return false;
+    byte buffer[16];
 
-    for (size_t i = 0; i < data.length(); i += 2) {
-        buffer[i / 2] = strtoul(data.substring(i, i + 2).c_str(), NULL, 16);
+    for (size_t i = 0; i < size; i++) {
+        buffer[i] = strtoul(data.substring(i * 2, i * 2 + 2).c_str(), NULL, 16);
     }
 
     if (authenticate_mifare_classic(block) != SUCCESS) return false;
@@ -639,11 +641,12 @@ bool RFID2::write_mifare_classic_data_block(int block, String data) {
 
 bool RFID2::write_mifare_ultralight_data_block(int block, String data) {
     data.replace(" ", "");
-    byte size = data.length() / 2;
-    byte buffer[size];
+    size_t size = data.length() / 2;
+    if (size == 0 || size > 4) return false;
+    byte buffer[4];
 
-    for (size_t i = 0; i < data.length(); i += 2) {
-        buffer[i / 2] = strtoul(data.substring(i, i + 2).c_str(), NULL, 16);
+    for (size_t i = 0; i < size; i++) {
+        buffer[i] = strtoul(data.substring(i * 2, i * 2 + 2).c_str(), NULL, 16);
     }
 
     byte status = mfrc522.MIFARE_Ultralight_Write((byte)block, buffer, size);
@@ -717,8 +720,9 @@ int RFID2::write_ndef_blocks() {
         return SUCCESS;
     }
 
-    byte ndef_size = ndefMessage.messageSize + 3;
-    byte payload_size = ndef_size % 4 == 0 ? ndef_size : ndef_size + (4 - (ndef_size % 4));
+    uint16_t ndef_size = (uint16_t)ndefMessage.messageSize + 3;
+    uint16_t payload_size = ndef_size % 4 == 0 ? ndef_size : ndef_size + (4 - (ndef_size % 4));
+    if (payload_size > 888) return FAILURE;
     byte ndef_payload[payload_size];
     byte i;
     bool blockWriteSuccess;

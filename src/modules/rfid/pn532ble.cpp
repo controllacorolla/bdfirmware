@@ -584,7 +584,7 @@ void Pn532ble::hf14aMfuReadDumpMode() {
             std::vector<uint8_t> res = pn532_ble.mfRdbl(block);
             if (res.size() == 17) { res.erase(res.begin()); }
             if (block == 0 && res.size() == 16) {
-                max_block = res[14] * 2 + 9;
+                max_block = std::min(res[14] * 2 + 9, 231);
                 area.addLine("PAGE: " + String(max_block));
                 area.addLine("------------");
                 area.scrollDown();

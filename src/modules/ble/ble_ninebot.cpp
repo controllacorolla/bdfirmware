@@ -106,7 +106,7 @@ void BLENinebot::setup() {
     pBLEScan->setWindow(SCAN_WINDOW);
 
     pClient = NimBLEDevice::createClient();
-    pClient->setClientCallbacks(new ScooterClientCallbacks(), false);
+    pClient->setClientCallbacks(new ScooterClientCallbacks(), true);
     pClient->setConnectTimeout(3);
 
     delay(CMD_DELAY);

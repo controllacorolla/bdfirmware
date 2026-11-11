@@ -537,12 +537,12 @@ static void resetHandshakeTracking() {
 
 static bool handshakeRecordExists(const String &path) {
     if (!handshakeMutex) { return SavedHS.find(path) != SavedHS.end(); }
-    if (xSemaphoreTake(handshakeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+    if (xSemaphoreTake(handshakeMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
         bool exists = SavedHS.find(path) != SavedHS.end();
         xSemaphoreGive(handshakeMutex);
         return exists;
     }
-    return SavedHS.find(path) != SavedHS.end();
+    return false;
 }
 
 static void registerHandshakeRecord(const String &path) {
@@ -550,11 +550,9 @@ static void registerHandshakeRecord(const String &path) {
         SavedHS.insert(path);
         return;
     }
-    if (xSemaphoreTake(handshakeMutex, pdMS_TO_TICKS(50)) == pdTRUE) {
+    if (xSemaphoreTake(handshakeMutex, pdMS_TO_TICKS(200)) == pdTRUE) {
         SavedHS.insert(path);
         xSemaphoreGive(handshakeMutex);
-    } else {
-        SavedHS.insert(path);
     }
 }
 

@@ -15,6 +15,7 @@
 #include "lwip/pbuf.h"
 #include "lwipopts.h"
 #include <esp_wifi.h>
+#include <modules/wifi/sniffer.h>
 #include <globals.h>
 #include <iomanip>
 #include <iostream>
@@ -50,6 +51,7 @@ bool ARPoisoner::arpPCAPfile() {
 
 void ARPoisoner::setup(IPAddress gateway) {
     if (!arpPCAPfile()) Serial.println("Fail creating ARP Pcap file");
+    else writeHeader(pcapFile);
 
     for (int i = 0; i < 6; i++) {
         gatewayMAC[i] = random(256);

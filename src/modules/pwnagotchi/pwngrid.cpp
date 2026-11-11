@@ -318,7 +318,7 @@ void initPwngrid() {
     esp_wifi_set_promiscuous(true);
     esp_wifi_set_promiscuous_rx_cb(pwnSnifferCallback);
     // esp_wifi_set_ps(WIFI_PS_NONE);
-    esp_wifi_set_channel(random(0, 14), WIFI_SECOND_CHAN_NONE);
+    esp_wifi_set_channel(random(1, 14), WIFI_SECOND_CHAN_NONE);
     vTaskDelay(1 / portTICK_RATE_MS);
 }
 #endif
