@@ -20,7 +20,7 @@ enum PlaybackState {
 struct AudioPlaybackInfo {
     PlaybackState state;
     String currentFile;
-    unsigned long duration; // Total duration in ms (0 if unknown) ACTUALLY NOT IMPLEMENTED
+    unsigned long duration = 0; // Total duration in ms (0 = unknown; currently WAV only)
     unsigned long position; // Current position in ms
     uint8_t volume;
     bool isAsyncMode;

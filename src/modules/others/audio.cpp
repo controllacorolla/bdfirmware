@@ -50,6 +50,7 @@ struct AudioPlayerState {
     unsigned long startTime;
     unsigned long pausedTime;
     unsigned long totalPausedDuration;
+    unsigned long durationMs; // Total track length in ms (0 = unknown)
 
     // Task handle
     TaskHandle_t taskHandle;
@@ -60,7 +61,8 @@ struct AudioPlayerState {
     AudioPlayerState()
         : generator(nullptr), source(nullptr), output(nullptr), state(PLAYBACK_IDLE), mode(PLAYBACK_BLOCKING),
           currentFile(""), stopRequested(false), pauseRequested(false), volumeChanged(false), newVolume(0),
-          currentGain(1.0f), startTime(0), pausedTime(0), totalPausedDuration(0), taskHandle(nullptr),
+          currentGain(1.0f), startTime(0), pausedTime(0), totalPausedDuration(0), durationMs(0),
+          taskHandle(nullptr),
           mutex(nullptr) {
         mutex = xSemaphoreCreateMutex();
     }
@@ -357,6 +359,7 @@ AudioPlaybackInfo getAudioPlaybackInfo() {
     if (g_audioPlayer->lock(pdMS_TO_TICKS(100))) {
         info.state = g_audioPlayer->state;
         info.currentFile = g_audioPlayer->currentFile;
+        info.duration = g_audioPlayer->durationMs;
         info.volume = bruceConfig.soundVolume;
         info.isAsyncMode = (g_audioPlayer->mode == PLAYBACK_ASYNC);
 
@@ -391,7 +394,8 @@ void setAudioPlaybackVolume(uint8_t volume) {
 
 // ===== HELPER: Start async playback task =====
 static bool startAsyncPlayback(
-    AudioGenerator *generator, AudioFileSource *source, AudioOutputI2S *output, const String &filename
+    AudioGenerator *generator, AudioFileSource *source, AudioOutputI2S *output, const String &filename,
+    unsigned long durationMs = 0
 ) {
     initAudioPlayer();
 
@@ -418,6 +422,7 @@ static bool startAsyncPlayback(
     g_audioPlayer->startTime = millis();
     g_audioPlayer->pausedTime = 0;
     g_audioPlayer->totalPausedDuration = 0;
+    g_audioPlayer->durationMs = durationMs;
 
     g_audioPlayer->unlock();
 
@@ -452,6 +457,47 @@ static bool startAsyncPlayback(
 
 // ===== CORE PLAYBACK FUNCTIONS =====
 
+// Parse a WAV header to get total playback duration in milliseconds.
+// Returns 0 for a non-WAV or unparseable file; callers treat 0 as "unknown".
+// The ESP8266Audio generators expose no total-length API, so this is the only
+// exact source of duration, and it applies to PCM WAV only.
+static unsigned long computeWavDurationMs(FS *fs, const String &path) {
+    if (!fs) return 0;
+    File f = fs->open(path, FILE_READ);
+    if (!f) return 0;
+
+    uint8_t hdr[12];
+    if (f.read(hdr, 12) != 12 || memcmp(hdr, "RIFF", 4) != 0 || memcmp(hdr + 8, "WAVE", 4) != 0) {
+        f.close();
+        return 0;
+    }
+
+    uint32_t byteRate = 0, dataBytes = 0;
+    while (f.available() >= 8) {
+        uint8_t ch[8];
+        if (f.read(ch, 8) != 8) break;
+        uint32_t chunkSize = (uint32_t)ch[4] | ((uint32_t)ch[5] << 8) | ((uint32_t)ch[6] << 16) |
+                             ((uint32_t)ch[7] << 24);
+        if (memcmp(ch, "fmt ", 4) == 0) {
+            if (chunkSize < 16) break;
+            uint8_t fmt[16];
+            if (f.read(fmt, 16) != 16) break;
+            byteRate = (uint32_t)fmt[8] | ((uint32_t)fmt[9] << 8) | ((uint32_t)fmt[10] << 16) |
+                       ((uint32_t)fmt[11] << 24);
+            if (chunkSize > 16) f.seek(f.position() + (chunkSize - 16) + (chunkSize & 1));
+        } else if (memcmp(ch, "data", 4) == 0) {
+            dataBytes = chunkSize;
+            break;
+        } else {
+            f.seek(f.position() + chunkSize + (chunkSize & 1)); // chunks are word-aligned
+        }
+    }
+    f.close();
+
+    if (byteRate == 0 || dataBytes == 0) return 0;
+    return (unsigned long)(((uint64_t)dataBytes * 1000ULL) / byteRate);
+}
+
 bool playAudioFile(FS *fs, String filepath, PlaybackMode mode) {
     if (!bruceConfig.soundEnabled) return false;
 
@@ -459,6 +505,15 @@ bool playAudioFile(FS *fs, String filepath, PlaybackMode mode) {
 
     // Stop any current playback
     if (isAudioPlaying()) { stopAudioPlayback(); }
+
+    // Pre-compute total duration for WAV before the decoder opens the file
+    // (the ESP8266Audio generators expose no total-length API). 0 = unknown.
+    unsigned long durationMs = 0;
+    {
+        String lower = filepath;
+        lower.toLowerCase();
+        if (lower.endsWith(".wav")) durationMs = computeWavDurationMs(fs, filepath);
+    }
 
     _setup_codec_speaker(true);
 
@@ -530,7 +585,7 @@ bool playAudioFile(FS *fs, String filepath, PlaybackMode mode) {
 
     // === ASYNC MODE ===
     Serial.println("Start audio (async)");
-    return startAsyncPlayback(generator, source, audioout, filepath);
+    return startAsyncPlayback(generator, source, audioout, filepath, durationMs);
 }
 
 bool playAudioRTTTLString(String song, PlaybackMode mode) {
