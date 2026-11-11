@@ -6,7 +6,7 @@
 #if !defined(LITE_VERSION)
 class EthernetMenu : public MenuItemInterface {
 private:
-    EthernetHelper *eth;
+    EthernetHelper *eth = nullptr;
     void start_ethernet();
 
 public:

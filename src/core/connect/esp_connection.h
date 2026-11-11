@@ -22,9 +22,9 @@ public:
 
     // Struct has to be 250 B max
     struct Message {
-        char filename[ESP_FILENAME_SIZE];
-        char filepath[ESP_FILEPATH_SIZE];
-        char data[ESP_DATA_SIZE];
+        char filename[ESP_FILENAME_SIZE] = {};
+        char filepath[ESP_FILEPATH_SIZE] = {};
+        char data[ESP_DATA_SIZE] = {};
         size_t dataSize;
         size_t totalBytes;
         size_t bytesSent;

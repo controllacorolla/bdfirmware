@@ -18,12 +18,12 @@ enum PlaybackState {
 
 // Playback info structure (for GUI)
 struct AudioPlaybackInfo {
-    PlaybackState state;
+    PlaybackState state = PLAYBACK_IDLE;
     String currentFile;
-    unsigned long duration; // Total duration in ms (0 if unknown) ACTUALLY NOT IMPLEMENTED
-    unsigned long position; // Current position in ms
-    uint8_t volume;
-    bool isAsyncMode;
+    unsigned long duration = 0; // Total duration in ms (0 if unknown) ACTUALLY NOT IMPLEMENTED
+    unsigned long position = 0; // Current position in ms
+    uint8_t volume = 0;
+    bool isAsyncMode = false;
 };
 
 // Existing functions

@@ -1450,7 +1450,7 @@ bool showJpeg(const uint8_t *data_array, size_t data_size, int x, int y, bool ce
 //  https://github.com/bitbank2/AnimatedGIF/blob/master/examples/best_practices_example/best_practices_example.ino
 // ####################################################################################################
 
-Gif::Gif() : gifPosition(0, 0) {}
+Gif::Gif() : gifPosition(0, 0) { gif = nullptr; }
 
 Gif::~Gif() {
     if (gif != nullptr) {

@@ -12,13 +12,13 @@
 enum IconType { ICON_PREV, ICON_PLAY, ICON_PAUSE, ICON_NEXT, ICON_VOL, ICON_LOOP_ON, ICON_LOOP_OFF };
 
 struct PlayerState {
-    bool isPlaying;
-    bool isPaused;
-    bool loopEnabled;
+    bool isPlaying = false;
+    bool isPaused = false;
+    bool loopEnabled = false;
     String filename;
-    unsigned long lastUpdate;
-    int scrollOffset;
-    unsigned long lastPauseAction;
+    unsigned long lastUpdate = 0;
+    int scrollOffset = 0;
+    unsigned long lastPauseAction = 0;
 };
 
 struct UILayout {
