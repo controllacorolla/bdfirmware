@@ -29,8 +29,8 @@ const uint8_t all_wifi_channels[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 const uint8_t pri_wifi_channels[] = {1, 6, 11};
 #endif
 struct BeaconList {
-    char MAC[6];
-    uint8_t channel;
+    char MAC[6]{};
+    uint8_t channel = 0;
     // Define comparison operator to use <set>
     bool operator<(const BeaconList &other) const {
         // Compare MACs (using memcmp)

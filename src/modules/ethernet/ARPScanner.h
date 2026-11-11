@@ -10,7 +10,7 @@
 
 class ARPScanner {
 private:
-    esp_netif_t *esp_net_interface;
+    esp_netif_t *esp_net_interface = nullptr;
     TickType_t arpRequestDelay =
         20u / portTICK_PERIOD_MS; // can be relatively low, helps to not overwhelm the stream
 

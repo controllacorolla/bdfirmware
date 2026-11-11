@@ -20,7 +20,7 @@ public:
     void setup();
 
 private:
-    int nTransmitterPin;
+    int nTransmitterPin = -1;
     bool sendRF = true;
     bool isCC1101 = false;
     RFJamMode jamMode = RF_JAM_FULL;

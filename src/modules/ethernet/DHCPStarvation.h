@@ -17,10 +17,10 @@ private:
 #define IPV4_LENGTH 4
 #define ETHERNET_PROTOCOL_IPV4 0x0800
 #define PACKET_LENGTH_DHCP 286 // ETH header + IPV4 header + UDP header + DHCP header
-    ip_hdr ipv4_pkt;
-    udp_hdr udp_payload;
-    dhcp_msg dhcp_payload;
-    byte mac[6];
+    ip_hdr ipv4_pkt{};
+    udp_hdr udp_payload{};
+    dhcp_msg dhcp_payload{};
+    byte mac[6]{};
     uint8_t broadcast_mac_address[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     void send_DHCP_packet();
     void show_gui();
@@ -42,6 +42,8 @@ private:
 public:
     DHCPStarvation();
     ~DHCPStarvation();
+    DHCPStarvation(const DHCPStarvation&) = delete;
+    DHCPStarvation& operator=(const DHCPStarvation&) = delete;
     void setup();
     void loop();
 };

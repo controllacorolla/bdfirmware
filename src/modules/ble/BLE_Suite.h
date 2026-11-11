@@ -56,10 +56,10 @@ enum FastPairExploitType {
 struct DeviceInfo {
     String address;
     String name;
-    int rssi;
-    bool hasFastPair;
-    bool hasHFP;
-    uint8_t deviceType;
+    int rssi = 0;
+    bool hasFastPair = false;
+    bool hasHFP = false;
+    uint8_t deviceType = 0;
 };
 
 struct DeviceSnapshot {
@@ -83,10 +83,10 @@ struct DeviceSnapshot {
 struct SelectedDevice {
     String address;
     String name;
-    int rssi;
-    bool hasFastPair;
-    bool hasHFP;
-    uint8_t deviceType;
+    int rssi = 0;
+    bool hasFastPair = false;
+    bool hasHFP = false;
+    uint8_t deviceType = 0;
 };
 
 //=============================================================================
@@ -100,12 +100,12 @@ struct ScannerData {
     std::vector<bool> deviceFastPair;
     std::vector<bool> deviceHasHFP;
     std::vector<uint8_t> deviceTypes;
-    SemaphoreHandle_t mutex;
-    int foundCount;
+    SemaphoreHandle_t mutex = nullptr;
+    int foundCount = 0;
 
-    uint32_t dataVersion;
-    DeviceSnapshot *snapshotCache;
-    uint32_t cacheTimestamp;
+    uint32_t dataVersion = 0;
+    DeviceSnapshot *snapshotCache = nullptr;
+    uint32_t cacheTimestamp = 0;
 
     ScannerData();
     ~ScannerData();
@@ -119,55 +119,55 @@ struct ScannerData {
 
 struct CharacteristicInfo {
     String uuid;
-    bool canRead;
-    bool canWrite;
-    bool canNotify;
+    bool canRead = false;
+    bool canWrite = false;
+    bool canNotify = false;
 };
 
 struct DeviceProfile {
     String address;
-    bool connected;
-    bool hasFastPair;
-    bool hasAVRCP;
-    bool hasHID;
-    bool hasBattery;
-    bool hasDeviceInfo;
+    bool connected = false;
+    bool hasFastPair = false;
+    bool hasAVRCP = false;
+    bool hasHID = false;
+    bool hasBattery = false;
+    bool hasDeviceInfo = false;
     std::vector<String> services;
     std::vector<CharacteristicInfo> characteristics;
 };
 
 struct HIDDeviceProfile {
     String osType;
-    bool supportsBootProtocol;
-    bool supportsReportProtocol;
-    bool requiresAuthentication;
-    bool hasExistingBond;
-    uint16_t vendorId;
-    uint16_t productId;
+    bool supportsBootProtocol = false;
+    bool supportsReportProtocol = false;
+    bool requiresAuthentication = false;
+    bool hasExistingBond = false;
+    uint16_t vendorId = 0;
+    uint16_t productId = 0;
     std::vector<String> servicePatterns;
-    int connectionBehavior;
+    int connectionBehavior = 0;
     String deviceName;
-    int rssi;
-    bool isAppleDevice;
-    bool isWindowsDevice;
-    bool isAndroidDevice;
-    bool isLinuxDevice;
-    bool isIoTDevice;
+    int rssi = 0;
+    bool isAppleDevice = false;
+    bool isWindowsDevice = false;
+    bool isAndroidDevice = false;
+    bool isLinuxDevice = false;
+    bool isIoTDevice = false;
     String suggestedAttack;
 };
 
 struct HIDConnectionResult {
-    bool success;
+    bool success = false;
     String method;
-    NimBLEClient *client;
-    uint32_t attemptTime;
-    int attemptCount;
+    NimBLEClient *client = nullptr;
+    uint32_t attemptTime = 0;
+    int attemptCount = 0;
 };
 
 struct DuckyCommand {
     String command;
     String parameter;
-    int delay_ms;
+    int delay_ms = 0;
 };
 
 //=============================================================================
@@ -226,10 +226,10 @@ public:
 struct FastPairDeviceInfo {
     NimBLEAddress address;
     String name;
-    int rssi;
-    bool supportsFastPair;
-    bool connected;
-    uint32_t modelId;
+    int rssi = 0;
+    bool supportsFastPair = false;
+    bool connected = false;
+    uint32_t modelId = 0;
     String deviceType;
 };
 

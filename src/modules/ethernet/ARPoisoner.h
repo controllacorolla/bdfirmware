@@ -6,10 +6,10 @@
 
 class ARPoisoner {
 private:
-    uint8_t gatewayIP[4];  // Gateway IP Address
-    uint8_t victimIP[4];   // Victim IP Address
-    uint8_t gatewayMAC[6]; // Gateway MAC
-    uint8_t victimMAC[6];  // Victim MAC
+    uint8_t gatewayIP[4]{};  // Gateway IP Address
+    uint8_t victimIP[4]{};   // Victim IP Address
+    uint8_t gatewayMAC[6]{}; // Gateway MAC
+    uint8_t victimMAC[6]{};  // Victim MAC
     File pcapFile;
     void setup(IPAddress gateway);
     void loop();

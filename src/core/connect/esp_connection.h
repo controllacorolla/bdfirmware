@@ -22,21 +22,16 @@ public:
 
     // Struct has to be 250 B max
     struct Message {
-        char filename[ESP_FILENAME_SIZE];
-        char filepath[ESP_FILEPATH_SIZE];
-        char data[ESP_DATA_SIZE];
-        size_t dataSize;
-        size_t totalBytes;
-        size_t bytesSent;
-        bool isFile;
-        bool done;
-        bool ping;
-        bool pong;
-
-        // Constructor to initialize defaults
-        Message()
-            : dataSize(0), totalBytes(0), bytesSent(0), isFile(false), done(false), ping(false), pong(false) {
-        }
+        char filename[ESP_FILENAME_SIZE]{};
+        char filepath[ESP_FILEPATH_SIZE]{};
+        char data[ESP_DATA_SIZE]{};
+        size_t dataSize = 0;
+        size_t totalBytes = 0;
+        size_t bytesSent = 0;
+        bool isFile = false;
+        bool done = false;
+        bool ping = false;
+        bool pong = false;
     };
 
     EspConnection();
@@ -48,9 +43,9 @@ public:
     static void onDataRecvStatic(const esp_now_recv_info_t *info, const uint8_t *incomingData, int len);
 
 protected:
-    Status recvStatus;
-    Status sendStatus;
-    uint8_t dstAddress[6];
+    Status recvStatus = CONNECTING;
+    Status sendStatus = CONNECTING;
+    uint8_t dstAddress[6]{};
     uint8_t broadcastAddress[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     std::vector<Message> recvQueue;
 

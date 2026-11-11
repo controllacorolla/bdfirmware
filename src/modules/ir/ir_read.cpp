@@ -26,11 +26,11 @@ String uint32ToString(uint32_t value) {
     snprintf(
         buffer,
         sizeof(buffer),
-        "%02lX %02lX %02lX %02lX",
-        value & 0xFF,
-        (value >> 8) & 0xFF,
-        (value >> 16) & 0xFF,
-        (value >> 24) & 0xFF
+        "%02X %02X %02X %02X",
+        (unsigned)(value & 0xFF),
+        (unsigned)((value >> 8) & 0xFF),
+        (unsigned)((value >> 16) & 0xFF),
+        (unsigned)((value >> 24) & 0xFF)
     );
     return String(buffer);
 }
@@ -40,11 +40,11 @@ String uint32ToStringInverted(uint32_t value) {
     snprintf(
         buffer,
         sizeof(buffer),
-        "%02lX %02lX %02lX %02lX",
-        (value >> 24) & 0xFF,
-        (value >> 16) & 0xFF,
-        (value >> 8) & 0xFF,
-        value & 0xFF
+        "%02X %02X %02X %02X",
+        (unsigned)((value >> 24) & 0xFF),
+        (unsigned)((value >> 16) & 0xFF),
+        (unsigned)((value >> 8) & 0xFF),
+        (unsigned)(value & 0xFF)
     );
     return String(buffer);
 }

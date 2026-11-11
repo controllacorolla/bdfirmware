@@ -33,8 +33,8 @@ public:
 private:
     bool date_time_updated = false;
     bool initial_position_set = false;
-    double cur_lat;
-    double cur_lng;
+    double cur_lat = 0.0;
+    double cur_lng = 0.0;
     double distance = 0;
     uint32_t sessionStartMs = 0;
     String filename = "";

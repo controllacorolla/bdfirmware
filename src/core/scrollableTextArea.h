@@ -34,21 +34,21 @@ public:
 
     uint32_t getMaxVisibleTextLength();
 
-    size_t firstVisibleLine;
-    size_t lastVisibleLine;
+    size_t firstVisibleLine = 0;
+    size_t lastVisibleLine = 0;
     /// TODO: Change to std::vector<char *> and alloc to PSRAM if possible
     std::vector<String> linesBuffer;
 
 private:
-    bool _redraw;
+    bool _redraw = false;
     String _title;
-    uint8_t _fontSize;
-    int16_t _startX, _startY;
-    int32_t _width, _height;
-    int32_t _pixelsPerLine;
-    size_t _maxVisibleLines;
-    uint16_t _maxCharactersPerLine;
-    bool _indentWrappedLines;
+    uint8_t _fontSize = 0;
+    int16_t _startX = 0, _startY = 0;
+    int32_t _width = 0, _height = 0;
+    int32_t _pixelsPerLine = 0;
+    size_t _maxVisibleLines = 0;
+    uint16_t _maxCharactersPerLine = 0;
+    bool _indentWrappedLines = false;
 
     void setup();
 

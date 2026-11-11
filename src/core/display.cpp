@@ -1355,21 +1355,23 @@ bool showJpeg(FS &fs, const String &filename, int x, int y, bool center) {
     else return false;
 
     const size_t data_size = picture.size();
+    if (data_size == 0) {
+        picture.close();
+        return false;
+    }
 
     // Alloc memory into heap
     uint8_t *data_array = new uint8_t[data_size];
     if (data_array == nullptr) {
-        // Fail allocating memory
         picture.close();
-        delete[] data_array;
         return false;
     }
 
     uint8_t data;
-    int i = 0;
+    size_t i = 0;
     byte line_len = 0;
 
-    while (picture.available()) {
+    while (picture.available() && i < data_size) {
         data = picture.read();
         data_array[i] = data;
         i++;

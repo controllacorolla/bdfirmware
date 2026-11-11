@@ -202,7 +202,7 @@ std::vector<Option>
 getScriptsOptionsList(const String &currentPath, bool saveStartupScript, int rememberedIndex) {
     std::vector<Option> opt = {};
 #if !defined(LITE_VERSION) && !defined(DISABLE_INTERPRETER)
-    FS *fs;
+    FS *fs = nullptr;
     String folder;
 
     if (currentPath == "") {
@@ -217,6 +217,7 @@ getScriptsOptionsList(const String &currentPath, bool saveStartupScript, int rem
         }
     }
 
+    if (!fs) return opt;
     File root = fs->open(folder);
     if (!root || !root.isDirectory()) return opt; // not a dir
 

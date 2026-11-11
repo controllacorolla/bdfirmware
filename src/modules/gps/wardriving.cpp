@@ -184,7 +184,7 @@ void Wardriving::display_banner() {
     uint32_t hours = elapsedSeconds / 3600;
     uint32_t minutes = (elapsedSeconds / 60) % 60;
     uint32_t seconds = elapsedSeconds % 60;
-    padprintf("Distance: %.2fkm  ET: %02lu:%02lu:%02lu\n", distance / 1000, hours, minutes, seconds);
+    padprintf("Distance: %.2fkm  ET: %02u:%02u:%02u\n", (unsigned)hours, (unsigned)minutes, (unsigned)seconds);
     // Serial.printf("Wardrive Elapsed Time: %02lu:%02lu:%02lu\n", hours, minutes, seconds);
 }
 
@@ -196,7 +196,7 @@ void Wardriving::dump_gps_data() {
     date_time_updated = true;
     padprintf(2, "Date: %02d-%02d-%02d\n", gps.date.year(), gps.date.month(), gps.date.day());
     padprintf(2, "Time: %02d:%02d:%02d\n", gps.time.hour(), gps.time.minute(), gps.time.second());
-    padprintf(2, "Sat:  %d\n", gps.satellites.value());
+    padprintf(2, "Sat:  %u\n", (unsigned)gps.satellites.value());
     padprintf(2, "HDOP: %.2f\n", gps.hdop.hdop());
 }
 
@@ -480,8 +480,8 @@ void Wardriving::loadAlertMACs() {
 
 void Wardriving::create_filename() {
     char timestamp[20];
-    sprintf(
-        timestamp,
+    snprintf(
+        timestamp, sizeof(timestamp),
         "%02d%02d%02d_%02d%02d%02d",
         gps.date.year() % 100,
         gps.date.month() % 100,

@@ -33,8 +33,8 @@ void displayScrollingText(const String &text, Opt_Coord &coord, bool highlight =
 #include <AnimatedGIF.h>
 
 struct GifPosition {
-    int x;
-    int y;
+    int x = 0;
+    int y = 0;
 
     GifPosition(int xCoord, int yCoord) : x(xCoord), y(yCoord) {}
 };
@@ -61,7 +61,10 @@ public:
 
     int getLastError();
 
-    AnimatedGIF *gif;
+    AnimatedGIF *gif = nullptr;
+
+    Gif(const Gif&) = delete;
+    Gif& operator=(const Gif&) = delete;
 
 private:
     static FS *GifFs;
