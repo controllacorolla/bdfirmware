@@ -615,8 +615,10 @@ void display_signal_data(RfCodes received, bool headless) {
             if (received.fix == 0) {
                 rf_info_line(headless, "Length: " + String(received.Bit) + " bits");
                 char *b = dec2binWzerofill(received.key, min(received.Bit, 40));
-                rf_info_line(headless, "Binary: " + String(b));
-                free(b);
+                if (b) {
+                    rf_info_line(headless, "Binary: " + String(b));
+                    free(b);
+                }
             }
         }
     } else {
@@ -763,9 +765,8 @@ String rf_scan(float start_freq, float stop_freq, int max_loops) {
     int mark_rssi = -100;
     String out = "";
 
-    while (max_loops || !check(EscPress)) {
+    while (!check(EscPress) && (max_loops < 0 || max_loops-- > 0)) {
         vTaskDelay(1 / portTICK_PERIOD_MS);
-        max_loops -= 1;
 
         setMHZ(freq);
 

@@ -61,13 +61,15 @@ uint16_t swapBytes(uint16_t c) { return (c >> 8) | (c << 8); }
 void rf_waterfall_run() {
     float f_start = m_rf_waterfall_start_freq;
     float f_end = m_rf_waterfall_end_freq;
-    const int screen_width = tft.width();
+    int screen_width = tft.width();
     const int screen_height = tft.height();
     const int display_top = screen_height / 5;
     float f_freq_step;
 
     // Alloc framebuffer
-    uint16_t frameBuffer[screen_width] = {0};
+    static uint16_t frameBuffer[480];
+    if (screen_width > 480) screen_width = 480;
+    memset(frameBuffer, 0, screen_width * sizeof(uint16_t));
 
     int current_line = display_top;
     initRfModule("rx", f_start);
