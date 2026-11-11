@@ -1356,20 +1356,30 @@ bool showJpeg(FS &fs, const String &filename, int x, int y, bool center) {
 
     const size_t data_size = picture.size();
 
+    // Guard empty/unreadable files: the read loop below would otherwise leave
+    // the whole buffer uninitialized and hand garbage to the decoder.
+    if (data_size == 0) {
+        picture.close();
+        return false;
+    }
+
     // Alloc memory into heap
     uint8_t *data_array = new uint8_t[data_size];
     if (data_array == nullptr) {
         // Fail allocating memory
         picture.close();
-        delete[] data_array;
         return false;
     }
 
     uint8_t data;
-    int i = 0;
+    size_t i = 0;
     byte line_len = 0;
 
-    while (picture.available()) {
+    // Bound the write to the allocated size. FS.available() can yield more
+    // bytes than size() reported on some filesystems; without this guard those
+    // extra bytes overflow the heap buffer and corrupt the heap, which later
+    // surfaces as a random reboot far from here.
+    while (picture.available() && i < data_size) {
         data = picture.read();
         data_array[i] = data;
         i++;
@@ -1395,7 +1405,9 @@ bool showJpeg(FS &fs, const String &filename, int x, int y, bool center) {
 
     bool decoded = false;
     if (data_array) {
-        decoded = JpegDec.decodeArray(data_array, data_size);
+        // Decode only the bytes actually read (i), never the nominal size, so a
+        // short read can't feed uninitialized tail bytes to the decoder.
+        decoded = JpegDec.decodeArray(data_array, i);
     } else {
         displayError(filename + " Fail");
         delay(2500);
