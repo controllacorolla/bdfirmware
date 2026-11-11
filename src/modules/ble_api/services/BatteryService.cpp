@@ -15,6 +15,7 @@ void battery_handler_task(void *params) {
     while (true) {
         uint8_t val = getBattery();
         battery_char->setValue(&val, 1);
+        battery_char->notify();
 
         delay(60000); // Update battery every minute
     }

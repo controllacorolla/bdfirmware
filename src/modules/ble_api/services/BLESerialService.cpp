@@ -34,9 +34,9 @@ void BLESerialService::end() { delete callbacks; }
 
 int BLESerialService::available() {
     if (!newValue) return 0;
-    newValue = false;
-
-    return serial_char->getValue().size();
+    int len = serial_char->getValue().size();
+    if (len == 0) newValue = false;
+    return len;
 }
 
 size_t BLESerialService::println(const String &s) {

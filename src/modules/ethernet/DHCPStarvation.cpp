@@ -160,7 +160,7 @@ void DHCPStarvation::setup() {
     memcpy(ethernet_frame + ETH_HDRLEN + IP_HLEN, &udp_payload, UDP_HLEN);
 
     // Fill DHCP payload
-    memcpy(ethernet_frame + ETH_HDRLEN + IP_HLEN + UDP_HLEN, &dhcp_payload, sizeof(dhcp_msg));
+    memcpy(ethernet_frame + ETH_HDRLEN + IP_HLEN + UDP_HLEN, &dhcp_payload, DHCP_HDRLEN);
 
     ethernet_frame[285] = 0xff; // Close the packet
 }

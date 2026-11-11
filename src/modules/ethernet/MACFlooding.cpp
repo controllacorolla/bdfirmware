@@ -90,7 +90,7 @@ void MACFlooding::prepare_packet_hdr() {
     ipv4_pkt._v_hl = 0x45; // IPV4-Jeader len: 5 bytes
     ipv4_pkt._tos = 0x10;
     ipv4_pkt._len = htons(20);    // 20, total len
-    ipv4_pkt._id = random(65535); // Avoid overflow limiting random to u16
+    ipv4_pkt._id = random(65536);
     ipv4_pkt._offset = 0x0;
     ipv4_pkt._ttl = 0x40; // TTL: 64
     ipv4_pkt._proto = 0x11;                         // Protocol: 17(UDP)
@@ -98,18 +98,18 @@ void MACFlooding::prepare_packet_hdr() {
     // memcpy(&ipv4_pkt.dest.addr, broadcast_mac_address, 4);
 
     uint8_t src_ip[4] = {
-        static_cast<uint8_t>(random(255)),
-        static_cast<uint8_t>(random(255)),
-        static_cast<uint8_t>(random(255)),
-        static_cast<uint8_t>(random(255))
+        static_cast<uint8_t>(random(256)),
+        static_cast<uint8_t>(random(256)),
+        static_cast<uint8_t>(random(256)),
+        static_cast<uint8_t>(random(256))
     };
     memcpy(&ipv4_pkt.src.addr, src_ip, 4);
 
     uint8_t dst_ip[4] = {
-        static_cast<uint8_t>(random(255)),
-        static_cast<uint8_t>(random(255)),
-        static_cast<uint8_t>(random(255)),
-        static_cast<uint8_t>(random(255))
+        static_cast<uint8_t>(random(256)),
+        static_cast<uint8_t>(random(256)),
+        static_cast<uint8_t>(random(256)),
+        static_cast<uint8_t>(random(256))
     };
     memcpy(&ipv4_pkt.dest.addr, dst_ip, 4);
 
@@ -131,7 +131,7 @@ void MACFlooding::change_mac_in_packet() {
 }
 
 void MACFlooding::randomize_mac(uint8_t *mac) {
-    for (int i = 0; i < 6; i++) { mac[i] = random() % 256; }
+    for (int i = 0; i < 6; i++) { mac[i] = random(256); }
 }
 
 void MACFlooding::setup() {
@@ -154,7 +154,7 @@ void MACFlooding::setup() {
 
     prepare_packet_hdr();
 
-    for (size_t i = 34; i < 54; i++) { ethernet_frame[i] = random(255); }
+    for (size_t i = 34; i < 54; i++) { ethernet_frame[i] = random(256); }
 
     memcpy(ethernet_frame, &eth_header, SIZEOF_ETH_HDR);
     memcpy(ethernet_frame + SIZEOF_ETH_HDR, &ipv4_pkt, IP_HLEN);
