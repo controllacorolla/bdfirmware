@@ -396,8 +396,8 @@ static void mj_logitechWake(const MjTarget &target) {
     delay(12);
 
     // Neutral keepalive frame after wake-up
-    uint8_t neutral = MJ_KEY_NONE;
-    mj_logTransmit(target, MJ_MOD_NONE, &neutral, 1);
+    uint8_t neutral[] = {MJ_KEY_NONE};
+    mj_logTransmit(target, MJ_MOD_NONE, neutral, 1);
     delay(8);
 }
 
