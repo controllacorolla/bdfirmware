@@ -54,9 +54,9 @@ struct JammerState {
     uint32_t runtime = 0;   // Total running time in seconds
 
     // Jamming pattern arrays for different modes
-    uint16_t basicPattern[20];               // Pattern for basic/enhanced modes (alternating mark/space)
+    uint16_t basicPattern[20]{};              // Pattern for basic/enhanced modes (alternating mark/space)
     uint16_t emptyPattern[4] = {1, 1, 1, 1}; // Minimal pattern for maximum disruption
-    uint16_t randomPattern[30];              // Buffer for dynamically generated random patterns
+    uint16_t randomPattern[30]{};             // Buffer for dynamically generated random patterns
 };
 
 // Function prototypes

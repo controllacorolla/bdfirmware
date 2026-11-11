@@ -30,14 +30,14 @@ struct RfPreset {
 // and used for replay dispatch — choose neutral, stable names.
 // ---------------------------------------------------------------------------
 struct RfProtocolDef {
-    const char *name;
-    uint16_t te;     // base pulse length in µs
-    HighLow sync;    // sync / pilot factor ({0,0} = none)
-    HighLow zero;    // bit 0 encoding
-    HighLow one;     // bit 1 encoding
-    uint8_t bits;    // typical payload length in bits (0 = variable)
-    bool inverted;   // inverted signal level
-    uint8_t flags;   // bitmask, see RF_PF_* below
+    const char *name = nullptr;
+    uint16_t te = 0;     // base pulse length in µs
+    HighLow sync{};      // sync / pilot factor ({0,0} = none)
+    HighLow zero{};      // bit 0 encoding
+    HighLow one{};       // bit 1 encoding
+    uint8_t bits = 0;    // typical payload length in bits (0 = variable)
+    bool inverted = false; // inverted signal level
+    uint8_t flags = 0;   // bitmask, see RF_PF_* below
 };
 
 // Protocol flags bitmask.

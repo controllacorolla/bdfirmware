@@ -12,7 +12,7 @@ private:
     mbedtls_mpi d;
     mbedtls_ecp_point Q;
     mbedtls_ctr_drbg_context ctr_drbg;
-    uint8_t shared_secret[32];
+    uint8_t shared_secret[32]{};
     mbedtls_aes_context aes_ctx;
 
 public:

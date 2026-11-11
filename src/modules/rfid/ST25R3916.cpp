@@ -1295,7 +1295,7 @@ int ST25R3916::emulate() {
                 hi = -1;
             }
         }
-        if (ub.size() == 4 || ub.size() == 7) {
+        if ((ub.size() == 4 || ub.size() == 7) && ub.size() <= sizeof(uidBuf)) {
             uidLen = ub.size();
             memcpy(uidBuf, ub.data(), uidLen);
         }

@@ -562,8 +562,8 @@ void TagOMatic::build_ndef_url_payload(const String &url) {
     // Same abbreviation codes NFC Forum URI records use, matched longest
     // prefix first so "https://www." isn't shadowed by "https://".
     static const struct {
-        const char *prefix;
-        byte uic;
+        const char *prefix = nullptr;
+        byte uic = 0;
     } kUriAbbrev[] = {
         {"https://www.", 2},
         {"http://www.",  1},

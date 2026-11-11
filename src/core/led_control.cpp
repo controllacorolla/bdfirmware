@@ -387,8 +387,8 @@ void setLedColorConfig() {
     ledPreviewMode(true);
 
     struct ColorMapping {
-        const char *name;
-        CRGB color;
+        const char *name = nullptr;
+        CRGB color{};
     };
 
     constexpr ColorMapping colorMappings[] = {
