@@ -66,6 +66,7 @@ EspConnection::Message EspConnection::createMessage(String text) {
     message.done = true;
 
     strncpy(message.data, text.c_str(), ESP_DATA_SIZE);
+    message.data[ESP_DATA_SIZE - 1] = '\0';
 
     return message;
 }
@@ -78,7 +79,9 @@ EspConnection::Message EspConnection::createFileMessage(File file) {
     message.totalBytes = file.size();
 
     strncpy(message.filename, file.name(), ESP_FILENAME_SIZE);
+    message.filename[ESP_FILENAME_SIZE - 1] = '\0';
     strncpy(message.filepath, path.substring(0, path.lastIndexOf("/")).c_str(), ESP_FILEPATH_SIZE);
+    message.filepath[ESP_FILEPATH_SIZE - 1] = '\0';
 
     return message;
 }

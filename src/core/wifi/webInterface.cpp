@@ -232,11 +232,14 @@ void handleUpload(
             String fullPath = uploadFolder + "/" + relativePath;
             String dirPath = fullPath.substring(0, fullPath.lastIndexOf("/"));
             if (dirPath.length() > 0) { createDirRecursive(dirPath, _webFS); }
-        RETRY:
-            request->_tempFile = _webFS.open(uploadFolder + "/" + filename, "w");
+            for (int _retries = 0; _retries < 3; _retries++) {
+                request->_tempFile = _webFS.open(uploadFolder + "/" + filename, "w");
+                if (request->_tempFile) break;
+                delay(50);
+            }
             if (!request->_tempFile) {
-                // Serial.println("Failed to open file for writing: " + uploadFolder + "/" + filename);
-                goto RETRY;
+                request->send(500, "text/plain", "Failed to open file for writing");
+                return;
             }
         }
 

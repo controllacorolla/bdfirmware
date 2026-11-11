@@ -153,10 +153,10 @@ uint32_t writeCallback(cmd *c) {
     if (!getFsStorage(fs)) return false;
 
     char *txt = _readFileFromSerial(fileSize + 2);
-    if (strlen(txt) == 0) return false;
+    if (!txt || strlen(txt) == 0) { free(txt); return false; }
 
     File f = fs->open(filepath, FILE_WRITE, true);
-    if (!f) return false;
+    if (!f) { free(txt); return false; }
 
     f.write((const uint8_t *)txt, strlen(txt));
     f.close();
@@ -548,10 +548,12 @@ uint32_t ymodemReceiveCallback(cmd *c) {
         if (firstBlock && blockNumReceived == 0) {
             // Block 0 contains filename and size info - parse it
             // Format: filename\0size_as_string\0...
+            blockBuffer[blockSize - 1] = '\0';
             char *filename = (char *)blockBuffer;
-            char *sizeStr = filename + strlen(filename) + 1;
+            size_t nameLen = strnlen(filename, blockSize - 1);
+            char *sizeStr = (nameLen + 1 < (size_t)blockSize) ? filename + nameLen + 1 : filename + nameLen;
 
-            if (strlen(sizeStr) > 0) { expectedFileSize = atol(sizeStr); }
+            if (sizeStr < (char *)blockBuffer + blockSize && strlen(sizeStr) > 0) { expectedFileSize = atol(sizeStr); }
 
 #ifdef YMODEM_LOGGING_ENABLED
             logYmodem("YModem: Header block received, file size: " + String(expectedFileSize));

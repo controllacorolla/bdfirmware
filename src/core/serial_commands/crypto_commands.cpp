@@ -53,8 +53,9 @@ uint32_t encryptFileCallback(cmd *c) {
     cachedPassword = password;
 
     char *txt = _readFileFromSerial();
-    if (strlen(txt) == 0) return false;
+    if (!txt || strlen(txt) == 0) { free(txt); return false; }
     String txtString = String(txt);
+    free(txt);
 
     FS *fs;
     if (!getFsStorage(fs)) return false;

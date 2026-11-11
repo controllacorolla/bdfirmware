@@ -59,10 +59,10 @@ uint32_t rfTxCallback(cmd *c) {
     String strTe = teArg.getValue();
     String strCount = cntArg.getValue();
 
-    uint64_t key = std::stoull(strKey.c_str(), nullptr, 16);
-    unsigned long frequency = std::stoul(strFrequency.c_str());
-    unsigned int te = std::stoul(strTe.c_str());
-    unsigned int count = std::stoul(strCount.c_str());
+    uint64_t key = strtoull(strKey.c_str(), nullptr, 16);
+    unsigned long frequency = strtoul(strFrequency.c_str(), nullptr, 10);
+    unsigned int te = strtoul(strTe.c_str(), nullptr, 10);
+    unsigned int count = strtoul(strCount.c_str(), nullptr, 10);
 
     unsigned int bits = 24; // TODO: compute from key
 
@@ -96,11 +96,11 @@ uint32_t rfTxByNameCallback(cmd *c) {
         return false;
     }
 
-    uint64_t key = std::stoull(strKey.c_str(), nullptr, 16);
-    unsigned long frequency = std::stoul(strFrequency.c_str());
-    unsigned int bits = std::stoul(strBits.c_str());
-    int te = strTe.length() ? (int)std::stoul(strTe.c_str()) : 0;
-    int repeat = strRepeat.length() ? (int)std::stoul(strRepeat.c_str()) : 10;
+    uint64_t key = strtoull(strKey.c_str(), nullptr, 16);
+    unsigned long frequency = strtoul(strFrequency.c_str(), nullptr, 10);
+    unsigned int bits = strtoul(strBits.c_str(), nullptr, 10);
+    int te = strTe.length() ? (int)strtoul(strTe.c_str(), nullptr, 10) : 0;
+    int repeat = strRepeat.length() ? (int)strtoul(strRepeat.c_str(), nullptr, 10) : 10;
 
     if (!initRfModule("tx", float(frequency / 1000000.0))) return false;
     rf_tx_protocol(key, bits, te, def, repeat);
@@ -143,11 +143,11 @@ uint32_t rfKeeloqTxCallback(cmd *c) {
 
     RfCodes data{};
     data.mf_name = mf;
-    data.btn = (uint8_t)std::stoul(strBtn.c_str());
-    data.serial = (uint32_t)std::stoul(strSerial.c_str(), nullptr, 16);
-    data.cnt = (uint16_t)std::stoul(strCnt.c_str());
-    unsigned long frequency = std::stoul(strFreq.c_str());
-    int repeat = strRepeat.length() ? (int)std::stoul(strRepeat.c_str()) : 10;
+    data.btn = (uint8_t)strtoul(strBtn.c_str(), nullptr, 10);
+    data.serial = (uint32_t)strtoul(strSerial.c_str(), nullptr, 16);
+    data.cnt = (uint16_t)strtoul(strCnt.c_str(), nullptr, 10);
+    unsigned long frequency = strtoul(strFreq.c_str(), nullptr, 10);
+    int repeat = strRepeat.length() ? (int)strtoul(strRepeat.c_str(), nullptr, 10) : 10;
 
     data.fix = ((uint32_t)data.btn << 28) | data.serial;
     data.Bit = 64;
@@ -286,9 +286,10 @@ uint32_t rfTxBufferCallback(cmd *c) {
     if (!(_setupPsramFs())) return false;
 
     char *txt = _readFileFromSerial();
+    if (!txt) return false;
     String tmpfilepath = "/tmpramfile"; // TODO: Change to use char *txt directly
     File f = PSRamFS.open(tmpfilepath, FILE_WRITE);
-    if (!f) return false;
+    if (!f) { free(txt); return false; }
 
     f.write((const uint8_t *)txt, strlen(txt));
     f.close();
@@ -341,7 +342,7 @@ uint32_t rfSendCallback(cmd *c) {
         dataStr = args_json["Data"].as<String>();
     }
 
-    uint64_t data_int = strtoul(dataStr.c_str(), nullptr, 16);
+    uint64_t data_int = strtoull(dataStr.c_str(), nullptr, 16);
     if (data_int == 0) {
         serialDevice->println("rfSendCallback: invalid data value: 0");
         serialDevice->println(dataStr);
@@ -359,6 +360,7 @@ uint32_t rfSendCallback(cmd *c) {
     if (!initRfModule("tx")) return false;
 
     rfTransmitCode(data_int, bits, pulse, protocol, repeat);
+    deinitRfModule();
 
     return true;
 }

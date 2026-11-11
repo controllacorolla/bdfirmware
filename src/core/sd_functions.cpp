@@ -253,6 +253,7 @@ bool copyToFs(FS from, FS to, String path, bool draw) {
     // heap-allocated (not stack) to keep this buffer off the task stack; freed before
     // every return below
     uint8_t *buff = (uint8_t *)malloc(bufSize);
+    if (!buff) { source.close(); dest.close(); return false; }
     // tft.drawRect(5,tftHeight-12, (tftWidth-10), 9, bruceConfig.priColor);
     while ((bytesRead = source.read(buff, bufSize)) > 0) {
         if (dest.write(buff, bytesRead) != bytesRead) {
