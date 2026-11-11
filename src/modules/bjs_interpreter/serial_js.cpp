@@ -59,6 +59,8 @@ JSValue native_serialReadln(JSContext *ctx, JSValue *this_val, int argc, JSValue
     if (argc > 0 && JS_IsNumber(ctx, argv[0])) {
         int t;
         JS_ToInt32(ctx, &t, argv[0]);
+        if (t < 0) t = 0;
+        if (t > 60000) t = 60000;
         maxloops = t;
     }
     Serial.flush();

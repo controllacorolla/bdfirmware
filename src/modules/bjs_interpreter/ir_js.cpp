@@ -21,10 +21,10 @@ JSValue native_irTransmitFile(JSContext *ctx, JSValue *this_val, int argc, JSVal
 JSValue native_irTransmit(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
     if (argc < 1 || !JS_IsString(ctx, argv[0]))
         return JS_ThrowTypeError(ctx, "irTransmit(data:string,protocol?:string,bits?:int) required");
-    JSCStringBuf sb;
-    const char *data = JS_ToCString(ctx, argv[0], &sb);
+    JSCStringBuf sb_data, sb_proto;
+    const char *data = JS_ToCString(ctx, argv[0], &sb_data);
     const char *protocol = "NEC";
-    if (argc > 1 && JS_IsString(ctx, argv[1])) { protocol = JS_ToCString(ctx, argv[1], &sb); }
+    if (argc > 1 && JS_IsString(ctx, argv[1])) { protocol = JS_ToCString(ctx, argv[1], &sb_proto); }
     int bits = 32;
     if (argc > 2 && JS_IsNumber(ctx, argv[2])) JS_ToInt32(ctx, &bits, argv[2]);
     bool r = sendDecodedCommand(protocol, data, bits);

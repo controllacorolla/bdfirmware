@@ -122,8 +122,9 @@ JSValue native_httpFetch(JSContext *ctx, JSValue *this_val, int argc, JSValue *a
                 JSValue jsvKey = JS_GetPropertyUint32(ctx, argv[1], i);
                 JSValue jsvValue = JS_GetPropertyUint32(ctx, argv[1], i + 1);
                 if (JS_IsString(ctx, jsvKey) && JS_IsString(ctx, jsvValue)) {
-                    const char *key = JS_ToCString(ctx, jsvKey, &stringBuffer);
-                    const char *value = JS_ToCString(ctx, jsvValue, &stringBuffer);
+                    JSCStringBuf keyBuf, valBuf;
+                    const char *key = JS_ToCString(ctx, jsvKey, &keyBuf);
+                    const char *value = JS_ToCString(ctx, jsvValue, &valBuf);
                     http.addHeader(key ? key : "", value ? value : "");
                 }
             }
@@ -187,8 +188,9 @@ JSValue native_httpFetch(JSContext *ctx, JSValue *this_val, int argc, JSValue *a
                         JSValue jsvKey = JS_GetPropertyUint32(ctx, jsvHeaders, i);
                         JSValue jsvValue = JS_GetPropertyUint32(ctx, jsvHeaders, i + 1);
                         if (JS_IsString(ctx, jsvKey) && JS_IsString(ctx, jsvValue)) {
-                            const char *key = JS_ToCString(ctx, jsvKey, &stringBuffer);
-                            const char *value = JS_ToCString(ctx, jsvValue, &stringBuffer);
+                            JSCStringBuf keyBuf, valBuf;
+                            const char *key = JS_ToCString(ctx, jsvKey, &keyBuf);
+                            const char *value = JS_ToCString(ctx, jsvValue, &valBuf);
                             http.addHeader(key ? key : "", value ? value : "");
                         }
                     }
@@ -310,6 +312,12 @@ JSValue native_httpFetch(JSContext *ctx, JSValue *this_val, int argc, JSValue *a
     if (argc > 1 && JS_IsObject(ctx, argv[1])) {
         JSValue jsvSave = JS_GetPropertyStr(ctx, argv[1], "save");
         hasSave = !JS_IsUndefined(jsvSave);
+    }
+
+    if (!payload) {
+        payload = (char *)(psramFoundValue ? ps_malloc(1) : malloc(1));
+        if (payload) payload[0] = '\0';
+        bytesRead = 0;
     }
 
     // Only set body property if save is not specified

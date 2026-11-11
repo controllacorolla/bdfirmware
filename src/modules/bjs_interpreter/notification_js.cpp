@@ -10,6 +10,8 @@ JSValue native_notifyBlink(JSContext *ctx, JSValue *this_val, int argc, JSValue 
         if (JS_IsNumber(ctx, argv[0])) {
             int d = 0;
             if (JS_ToInt32(ctx, &d, argv[0])) return JS_EXCEPTION;
+            if (d < 0) d = 0;
+            if (d > 10000) d = 10000;
             delayMs = (uint32_t)d;
         } else if (JS_IsString(ctx, argv[0])) {
             JSCStringBuf buf;

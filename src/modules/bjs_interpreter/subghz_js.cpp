@@ -47,14 +47,18 @@ JSValue native_subghzTransmit(JSContext *ctx, JSValue *this_val, int argc, JSVal
     if (argc > 2 && JS_IsNumber(ctx, argv[2])) {
         int tmp;
         JS_ToInt32(ctx, &tmp, argv[2]);
-        te = tmp;
+        if (tmp < 1) tmp = 1;
+        if (tmp > 100000) tmp = 100000;
+        te = (uint32_t)tmp;
     }
 
     uint32_t count = 10;
     if (argc > 3 && JS_IsNumber(ctx, argv[3])) {
         int tmp;
         JS_ToInt32(ctx, &tmp, argv[3]);
-        count = tmp;
+        if (tmp < 1) tmp = 1;
+        if (tmp > 10000) tmp = 10000;
+        count = (uint32_t)tmp;
     }
 
     bool r = false;

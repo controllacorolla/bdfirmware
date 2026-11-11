@@ -487,8 +487,10 @@ JSValue native_drawBitmap(JSContext *ctx, JSValue *this_val, int argc, JSValue *
     size_t paletteSize = 0;
     if ((bpp == 4 || bpp == 1) && argc > 6 && JS_IsTypedArray(ctx, argv[6])) {
         palette = (uint16_t *)JS_GetTypedArrayBuffer(ctx, &paletteSize, argv[6]);
-        if (!palette || paletteSize == 0) {
-            return JS_ThrowTypeError(ctx, "%s: Invalid palette! Expected a valid ArrayBuffer.", "drawBitmap");
+        size_t minPaletteBytes = (bpp == 4) ? 32 : 4;
+        if (!palette || paletteSize < minPaletteBytes) {
+            return JS_ThrowTypeError(ctx, "%s: palette too small (%u bytes, need %u)", "drawBitmap",
+                (unsigned)paletteSize, (unsigned)minPaletteBytes);
         }
     }
 
@@ -537,7 +539,7 @@ JSValue native_drawXBitmap(JSContext *ctx, JSValue *this_val, int argc, JSValue 
     }
     uint64_t expectedSize = (((uint64_t)bitmapWidth + 7) / 8) * (uint64_t)bitmapHeight;
     if ((uint64_t)len != expectedSize) {
-        Serial.printf("data = %s\n", data);
+        Serial.printf("data len = %lu\n", (unsigned long)len);
         return JS_ThrowTypeError(
             ctx, "Bitmap size mismatch, len: %d, expected: %d", (int)len, (int)expectedSize
         );
@@ -651,12 +653,14 @@ JSValue native_height(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv
 }
 
 JSValue native_drawImage(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
+    if (argc < 1) return JS_ThrowTypeError(ctx, "drawImage: filename required");
     FileParamsJS file = js_get_path_from_params(ctx, argv, true, true);
     drawImg(*file.fs, file.path, 0, 0, 0);
     return JS_UNDEFINED;
 }
 
 JSValue native_drawJpg(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
+    if (argc < 1) return JS_ThrowTypeError(ctx, "drawJpg: argument required");
     FileParamsJS file;
     int x = 0, y = 0, center = 0;
     int base = 0;
@@ -686,6 +690,7 @@ JSValue native_drawJpg(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
 
 JSValue native_drawGif(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
 #if !defined(LITE_VERSION)
+    if (argc < 1) return JS_ThrowTypeError(ctx, "drawGif: filename required");
     FileParamsJS file = js_get_path_from_params(ctx, argv, true, true);
 
     int x = 0, y = 0, center = 0, playDurationMs = 0;
@@ -794,6 +799,7 @@ JSValue native_gifClose(JSContext *ctx, JSValue *this_val, int argc, JSValue *ar
 
 JSValue native_gifOpen(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
 #if !defined(LITE_VERSION)
+    if (argc < 1) return JS_ThrowTypeError(ctx, "gifOpen: filename required");
     FileParamsJS file = js_get_path_from_params(ctx, argv, true, true);
     Gif *gif = new Gif();
     bool success = gif->openGIF(file.fs, file.path.c_str());

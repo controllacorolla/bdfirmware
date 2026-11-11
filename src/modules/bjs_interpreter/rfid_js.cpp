@@ -259,10 +259,12 @@ JSValue native_srixRead(JSContext *ctx, JSValue *this_val, int argc, JSValue *ar
     // Get UID using getUID() method
     String uid_str = "";
     uint8_t *uid = srixReader->getUID();
-    for (uint8_t i = 0; i < 8; i++) {
-        if (uid[i] < 0x10) uid_str += "0";
-        uid_str += String(uid[i], HEX);
-        if (i < 7) uid_str += " ";
+    if (uid) {
+        for (uint8_t i = 0; i < 8; i++) {
+            if (uid[i] < 0x10) uid_str += "0";
+            uid_str += String(uid[i], HEX);
+            if (i < 7) uid_str += " ";
+        }
     }
     uid_str.toUpperCase();
     JS_SetPropertyStr(ctx, obj, "uid", JS_NewString(ctx, uid_str.c_str()));
@@ -276,9 +278,11 @@ JSValue native_srixRead(JSContext *ctx, JSValue *this_val, int argc, JSValue *ar
     // Data as hex string using getDump() method
     String dump_str = "";
     uint8_t *dump = srixReader->getDump();
-    for (uint16_t i = 0; i < 512; i++) {
-        if (dump[i] < 0x10) dump_str += "0";
-        dump_str += String(dump[i], HEX);
+    if (dump) {
+        for (uint16_t i = 0; i < 512; i++) {
+            if (dump[i] < 0x10) dump_str += "0";
+            dump_str += String(dump[i], HEX);
+        }
     }
     dump_str.toUpperCase();
     JS_SetPropertyStr(ctx, obj, "data", JS_NewString(ctx, dump_str.c_str()));
@@ -377,10 +381,12 @@ JSValue native_srixLoad(JSContext *ctx, JSValue *this_val, int argc, JSValue *ar
     // UID using getUID()
     String uid_str = "";
     uint8_t *uid = srixReader->getUID();
-    for (uint8_t i = 0; i < 8; i++) {
-        if (uid[i] < 0x10) uid_str += "0";
-        uid_str += String(uid[i], HEX);
-        if (i < 7) uid_str += " ";
+    if (uid) {
+        for (uint8_t i = 0; i < 8; i++) {
+            if (uid[i] < 0x10) uid_str += "0";
+            uid_str += String(uid[i], HEX);
+            if (i < 7) uid_str += " ";
+        }
     }
     uid_str.toUpperCase();
     JS_SetPropertyStr(ctx, obj, "uid", JS_NewString(ctx, uid_str.c_str()));
@@ -391,9 +397,11 @@ JSValue native_srixLoad(JSContext *ctx, JSValue *this_val, int argc, JSValue *ar
     // Data as hex string using getDump()
     String dump_str = "";
     uint8_t *dump = srixReader->getDump();
-    for (uint16_t i = 0; i < 512; i++) {
-        if (dump[i] < 0x10) dump_str += "0";
-        dump_str += String(dump[i], HEX);
+    if (dump) {
+        for (uint16_t i = 0; i < 512; i++) {
+            if (dump[i] < 0x10) dump_str += "0";
+            dump_str += String(dump[i], HEX);
+        }
     }
     dump_str.toUpperCase();
     JS_SetPropertyStr(ctx, obj, "data", JS_NewString(ctx, dump_str.c_str()));

@@ -335,7 +335,9 @@ JSValue native_dialogCreateTextViewer(JSContext *ctx, JSValue *this_val, int arg
         if (!JS_IsUndefined(v) && JS_IsNumber(ctx, v)) {
             int tmp;
             JS_ToInt32(ctx, &tmp, v);
-            fontSize = tmp;
+            if (tmp < 1) tmp = 1;
+            if (tmp > 4) tmp = 4;
+            fontSize = (uint8_t)tmp;
         }
         v = JS_GetPropertyStr(ctx, argv[1], "startX");
         if (!JS_IsUndefined(v) && JS_IsNumber(ctx, v)) {

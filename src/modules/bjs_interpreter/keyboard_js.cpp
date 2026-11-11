@@ -21,9 +21,11 @@ static JSValue keyboard_wrapper(JSContext *ctx, JSValue *argv, int argc, Keyboar
     } else if (JS_IsNumber(ctx, argv[0])) {
         int max_size = 0;
         if (JS_ToInt32(ctx, &max_size, argv[0])) return JS_EXCEPTION;
+        if (max_size <= 0) max_size = 256;
+        if (max_size > 4096) max_size = 4096;
+        JSCStringBuf buf;
         const char *msg = "";
         if (argc > 1 && JS_IsString(ctx, argv[1])) {
-            JSCStringBuf buf;
             msg = JS_ToCString(ctx, argv[1], &buf);
         }
         bool mask_input = JS_IsBool(argv[argc - 1]) ? JS_ToBool(ctx, argv[argc - 1]) : false;

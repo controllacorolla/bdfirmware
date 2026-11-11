@@ -10,6 +10,7 @@ JSValue js_gc(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
 }
 
 JSValue js_load(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
+    if (argc < 1) return JS_ThrowTypeError(ctx, "load: filename required");
     JSCStringBuf buf_str;
     const char *filename = JS_ToCString(ctx, argv[0], &buf_str);
     if (!filename) return JS_EXCEPTION;
@@ -130,6 +131,7 @@ JSValue js_setTimeout(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv
     int delay, i;
     JSValue *pfunc;
 
+    if (argc < 2) return JS_ThrowTypeError(ctx, "setTimeout requires (fn, ms)");
     if (!JS_IsFunction(ctx, argv[0])) return JS_ThrowTypeError(ctx, "not a function");
     if (JS_ToInt32(ctx, &delay, argv[1])) return JS_EXCEPTION;
 
@@ -157,6 +159,7 @@ JSValue js_setInterval(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
     int delay, i;
     JSValue *pfunc;
 
+    if (argc < 2) return JS_ThrowTypeError(ctx, "setInterval requires (fn, ms)");
     if (!JS_IsFunction(ctx, argv[0])) return JS_ThrowTypeError(ctx, "not a function");
     if (JS_ToInt32(ctx, &delay, argv[1])) return JS_EXCEPTION;
 
@@ -180,6 +183,7 @@ JSValue js_setInterval(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
 }
 
 JSValue js_clearTimeout(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
+    if (argc < 1) return JS_UNDEFINED;
     int timer_id;
     JSTimer *th;
 
@@ -314,8 +318,8 @@ JSValue native_assert(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv
     if (argc > 0) ok = JS_ToBool(ctx, argv[0]);
     if (ok) { return JS_NewBool(1); }
     const char *msg = "assert";
+    JSCStringBuf sb;
     if (argc > 1 && JS_IsString(ctx, argv[1])) {
-        JSCStringBuf sb;
         const char *s = JS_ToCString(ctx, argv[1], &sb);
         if (s) msg = s;
     }
@@ -333,6 +337,8 @@ JSValue native_delay(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
     if (argc > 0 && JS_IsNumber(ctx, argv[0])) {
         int ms;
         JS_ToInt32(ctx, &ms, argv[0]);
+        if (ms < 0) ms = 0;
+        if (ms > 60000) ms = 60000;
         vTaskDelay(pdMS_TO_TICKS(ms));
     }
     if (interpreter_state < 0) { return JS_ThrowInternalError(ctx, "Script exited"); }

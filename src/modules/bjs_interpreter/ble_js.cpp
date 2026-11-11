@@ -14,6 +14,7 @@ JSValue native_bleScan(JSContext *ctx, JSValue *this_val, int argc, JSValue *arg
 
     BLEDevice::init("");
     NimBLEScan *pScan = BLEDevice::getScan();
+    if (!pScan) return JS_ThrowInternalError(ctx, "BLE scan init failed");
     pScan->setActiveScan(true);
     pScan->setInterval(100);
     pScan->setWindow(99);
@@ -57,6 +58,7 @@ JSValue native_bleAdvertise(JSContext *ctx, JSValue *this_val, int argc, JSValue
 
     BLEDevice::init(name);
     NimBLEServer *pServer = BLEDevice::createServer();
+    if (!pServer) return JS_ThrowInternalError(ctx, "BLE server creation failed");
     pServer->getAdvertising()->start();
 
     return JS_NewBool(true);
