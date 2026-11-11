@@ -31,7 +31,7 @@ void ReverseShell() {
 
             case WS_EVT_DATA:
                 if (shellConnected && tcpClient) {
-                    String cmd = String((char*)data);
+                    String cmd = String((const char*)data, len);
                     cmd.trim();
                     if (cmd.length() > 0) {
                         tcpClient.println(cmd);

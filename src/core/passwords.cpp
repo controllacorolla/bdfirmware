@@ -114,6 +114,7 @@ String readDecryptedFile(FS &fs, String filepath) {
     for (int i = 0; i < cypertextData.length(); i += 3) {
         // Converts two characters hex to a single byte
 
+        if (i + 1 >= (int)cypertextData.length()) break;
         uint8_t highNibble = hexCharToDecimal(cypertextData[i]);
         uint8_t lowNibble = hexCharToDecimal(cypertextData[i + 1]);
         decimal = (highNibble << 4) | lowNibble;

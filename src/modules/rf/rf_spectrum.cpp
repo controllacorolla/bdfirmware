@@ -72,7 +72,7 @@ void rf_spectrum() {
     if (rx_ch == NULL) return;
     ESP_LOGI("RMT_SPECTRUM", "register RX done callback");
     QueueHandle_t receive_queue = xQueueCreate(1, sizeof(rmt_rx_done_event_data_t));
-    assert(receive_queue);
+    if (!receive_queue) { rmt_del_channel(rx_ch); deinitRfModule(); return; }
     rmt_rx_event_callbacks_t cbs = {
         .on_recv_done = spectrum_rmt_rx_done_callback,
     };
@@ -104,7 +104,7 @@ void rf_spectrum() {
                         SIGNAL_STRENGTH_THRESHOLD,
                         0,
                         tftHeight / 2);
-                int lineX = map(i, 0, rx_size - 1, 0, tftWidth - 1); // Map i to within the display width
+                int lineX = (rx_size > 1) ? map(i, 0, rx_size - 1, 0, tftWidth - 1) : 0;
                 int startY = constrain(20 + tftHeight / 2 - lineHeight / 2, 20, 20 + tftHeight);
                 int endY = constrain(20 + tftHeight / 2 + lineHeight / 2, 20, 20 + tftHeight);
                 tft.drawLine(lineX, startY, lineX, endY, bruceConfig.priColor);

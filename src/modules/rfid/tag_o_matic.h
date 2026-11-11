@@ -57,7 +57,7 @@ public:
 #endif
 
 private:
-    RFIDInterface *_rfid;
+    RFIDInterface *_rfid = nullptr;
     RFID_State _initial_state;
     bool _read_uid = false;
     bool _ndef_created = false;

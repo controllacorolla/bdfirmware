@@ -293,6 +293,11 @@ const uint8_t *keyboardLayouts[] PROGMEM = {
     KeyboardLayout_sv_SE, // 12
     KeyboardLayout_tr_TR  // 13
 };
+static constexpr int kNumKeyboardLayouts = sizeof(keyboardLayouts) / sizeof(keyboardLayouts[0]);
+static inline int safeLayoutIdx() {
+    int idx = bruceConfig.badUSBBLEKeyboardLayout;
+    return (idx >= 0 && idx < kNumKeyboardLayouts) ? idx : 0;
+}
 
 // ============================================================================
 // MENU KEY STRUCTURES - Stored in PROGMEM
@@ -636,7 +641,7 @@ void ducky_startKb(HIDInterface *&hid, bool ble, int functionId) {
             Serial.printf("[ducky_startKb] hid_ble now points to instance %p\n", hid_ble);
 
             const uint8_t *layout =
-                (const uint8_t *)pgm_read_ptr(&keyboardLayouts[bruceConfig.badUSBBLEKeyboardLayout]);
+                (const uint8_t *)pgm_read_ptr(&keyboardLayouts[safeLayoutIdx()]);
 
             // Start the HID service
             hid->begin(layout);
@@ -673,7 +678,7 @@ void ducky_startKb(HIDInterface *&hid, bool ble, int functionId) {
         if (hid->isConnected()) {
             Serial.println("BLE Already connected, updating settings");
             const uint8_t *layout =
-                (const uint8_t *)pgm_read_ptr(&keyboardLayouts[bruceConfig.badUSBBLEKeyboardLayout]);
+                (const uint8_t *)pgm_read_ptr(&keyboardLayouts[safeLayoutIdx()]);
             hid->setLayout(layout);
             hid->setDelay(bruceConfig.badUSBBLEKeyDelay);
             return;
@@ -681,20 +686,20 @@ void ducky_startKb(HIDInterface *&hid, bool ble, int functionId) {
 
         Serial.println("Starting/restarting BLE advertising");
         const uint8_t *layout =
-            (const uint8_t *)pgm_read_ptr(&keyboardLayouts[bruceConfig.badUSBBLEKeyboardLayout]);
+            (const uint8_t *)pgm_read_ptr(&keyboardLayouts[safeLayoutIdx()]);
         hid->begin(layout);
         hid->setDelay(bruceConfig.badUSBBLEKeyDelay);
     } else {
 #if defined(USB_as_HID)
         const uint8_t *layout =
-            (const uint8_t *)pgm_read_ptr(&keyboardLayouts[bruceConfig.badUSBBLEKeyboardLayout]);
+            (const uint8_t *)pgm_read_ptr(&keyboardLayouts[safeLayoutIdx()]);
         hid->begin(layout);
         hid->setDelay(bruceConfig.badUSBBLEKeyDelay);
 #else
         mySerial.begin(CH9329_DEFAULT_BAUDRATE, SERIAL_8N1, BAD_RX, BAD_TX);
         delay(100);
         const uint8_t *layout =
-            (const uint8_t *)pgm_read_ptr(&keyboardLayouts[bruceConfig.badUSBBLEKeyboardLayout]);
+            (const uint8_t *)pgm_read_ptr(&keyboardLayouts[safeLayoutIdx()]);
         hid->begin(mySerial, layout);
         hid->setDelay(bruceConfig.badUSBBLEKeyDelay);
 #endif

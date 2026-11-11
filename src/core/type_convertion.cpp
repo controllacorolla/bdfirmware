@@ -80,6 +80,7 @@ uint32_t hexStringToDecimal(const char *hexString) {
         decimal <<= 8; // Shift left to accommodate next byte
 
         // Converts two characters hex to a single byte
+        if (i + 1 >= length) break;
         uint8_t highNibble = hexCharToDecimal(hexString[i]);
         uint8_t lowNibble = hexCharToDecimal(hexString[i + 1]);
         decimal |= (highNibble << 4) | lowNibble;

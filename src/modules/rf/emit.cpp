@@ -76,6 +76,7 @@ void rf_raw_emit(RawRecording &recorded, bool &returnToMenu) {
     xTaskCreate(rf_raw_emit_draw, "RawEmitDraw", 4096, NULL, 1, &rf_raw_emit_draw_handle);
 
     for (size_t i = 0; i < recorded.codes.size(); ++i) {
+        if (i >= recorded.codeLengths.size()) break;
         // Send the RMT code
         for (int j = 0; j < recorded.codeLengths[i]; j++) {
             outputState = true;
@@ -88,7 +89,7 @@ void rf_raw_emit(RawRecording &recorded, bool &returnToMenu) {
             if (selPressed || escPressed) break;
         }
         outputState = false;
-        if (i < recorded.codes.size() - 1) {
+        if (i < recorded.codes.size() - 1 && i < recorded.gaps.size()) {
             unsigned long startTime = millis();
             while (millis() - startTime < recorded.gaps[i]) {
                 delay(10); // Small delay to avoid busy-waiting

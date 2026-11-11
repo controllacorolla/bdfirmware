@@ -22,7 +22,7 @@ JSValue native_tone(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) 
 
     if (argc > 0) { JS_ToUint32(ctx, &freq, argv[0]); }
     if (argc > 1) { JS_ToUint32(ctx, &duration, argv[1]); }
-    if (argc > 2) { nonBlocking = JS_ToInt32(ctx, &nonBlocking, argv[2]); }
+    if (argc > 2) { JS_ToInt32(ctx, &nonBlocking, argv[2]); }
 
 #if defined(BUZZ_PIN)
     tone(BUZZ_PIN, freq, duration);

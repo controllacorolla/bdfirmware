@@ -81,7 +81,7 @@ JSValue native_wifiScan(JSContext *ctx, JSValue *this_val, int argc, JSValue *ar
     for (int i = 0; i < nets; i++) {
         JSValue obj = JS_NewObject(ctx);
         int enctypeInt = int(WiFi.encryptionType(i));
-        const char *enctype = enctypeInt < 12 ? wifi_enc_types[enctypeInt] : "UNKNOWN";
+        const char *enctype = (enctypeInt >= 0 && enctypeInt < 12) ? wifi_enc_types[enctypeInt] : "UNKNOWN";
         JS_SetPropertyStr(ctx, obj, "encryptionType", JS_NewString(ctx, enctype));
         JS_SetPropertyStr(ctx, obj, "SSID", JS_NewString(ctx, WiFi.SSID(i).c_str()));
         JS_SetPropertyStr(ctx, obj, "MAC", JS_NewString(ctx, WiFi.BSSIDstr(i).c_str()));

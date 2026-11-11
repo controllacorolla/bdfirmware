@@ -305,12 +305,16 @@ void ARPScanner::afterScanOptions(const Host &host) {
              auto it = std::find_if(hostslist_eth.begin(), hostslist_eth.end(), [this](const Host &host) {
                  return host.ip == gateway;
              });
+             if (it == hostslist_eth.end()) {
+                 displayError("Gateway not found in host list");
+                 return;
+             }
 
              uint8_t mac[6];
              esp_err_t err = esp_netif_get_mac(esp_net_interface, mac);
              if (err == ESP_OK) {
                  uint8_t gw_mac[6];
-                 macStringToByteArray((*it).mac.c_str(), gw_mac);
+                 macStringToByteArray(it->mac.c_str(), gw_mac);
                  ARPSpoofer(host, gw, gw_mac, mac, false);
              } else {
                  ESP_LOGE("MAC Address", "Failed to get MAC address: %s", esp_err_to_name(err));

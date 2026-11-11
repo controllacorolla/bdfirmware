@@ -69,7 +69,7 @@ public:
         {0x00, 0x00, 0x0F, 0xFE, 0x24, 0x88}
     };
 
-    Uid uid;
+    Uid uid = {};
     PrintableUID printableUID;
     NdefMessage ndefMessage;
     std::vector<uint8_t> rawNdefRecord;

@@ -7,12 +7,12 @@
 
 class ARPSpoofer {
 private:
-    uint8_t gatewayIP[4];  // Gateway IP Address
-    uint8_t victimIP[4];   // Victim IP Address
-    uint8_t gatewayMAC[6]; // Gateway MAC
-    uint8_t victimMAC[6];  // Victim MAC
-    uint8_t myMAC[6];      // ESP32 MAC Address
-    bool mitm;
+    uint8_t gatewayIP[4] = {};  // Gateway IP Address
+    uint8_t victimIP[4] = {};   // Victim IP Address
+    uint8_t gatewayMAC[6] = {}; // Gateway MAC
+    uint8_t victimMAC[6] = {};  // Victim MAC
+    uint8_t myMAC[6] = {};      // ESP32 MAC Address
+    bool mitm = false;
 
     File pcapFile;
     void setup(const Host &host, IPAddress gateway);

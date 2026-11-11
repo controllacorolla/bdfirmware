@@ -191,6 +191,7 @@ void EspConnection::onDataSent(const uint8_t *mac_addr, esp_now_send_status_t st
 }
 
 void EspConnection::onDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len) {
+    if (len < (int)sizeof(Message)) return;
     Message recvMessage;
 
     // Use reinterpret_cast and copy assignment

@@ -62,8 +62,8 @@ buildModelOptions(NimBLERemoteCharacteristic *pTXChar, std::vector<Option> &devi
     charOptions.reserve(sizeof(payloads) / sizeof(payloads[0]) + 1);
 
     for (size_t i = 0; i < sizeof(payloads) / sizeof(payloads[0]); ++i) {
-        const PayloadDef &pd = payloads[i];
-        charOptions.push_back({pd.label, [pTXChar, &deviceSelection, &pd](void) {
+        charOptions.push_back({payloads[i].label, [pTXChar, &deviceSelection, i](void) {
+                                   const PayloadDef &pd = payloads[i];
                                    bool success = pTXChar->writeValue(pd.data, pd.len, true);
                                    displayTextLine(success ? "Write success!" : "Write failed!");
                                    delay(UI_READ_DELAY);
@@ -84,8 +84,8 @@ buildModelOptions(NimBLERemoteCharacteristic *pTXChar, std::vector<Option> &devi
 
 BLENinebot::BLENinebot() { setup(); }
 BLENinebot::~BLENinebot() {
-    if (!scooterDisconnected) pClient->disconnect();
-    pBLEScan->clearResults();
+    if (!scooterDisconnected && pClient) pClient->disconnect();
+    if (pBLEScan) pBLEScan->clearResults();
 }
 
 void BLENinebot::clientDisconnect() {
@@ -142,13 +142,14 @@ void BLENinebot::loop() {
             const NimBLEAdvertisedDevice *adv = results.getDevice(i);
             String name = adv->getName().length() ? String(adv->getName().c_str())
                                                   : String(adv->getAddress().toString().c_str());
+            NimBLEAddress deviceAddr = adv->getAddress();
 
             deviceSelection.push_back(
-                {name, [&, adv](void) mutable {
+                {name, [&, deviceAddr](void) mutable {
                      redrawMainBorder();
                      displayTextLine("Connecting...");
                      scooterDisconnected = false;
-                     if (!pClient->connect(adv->getAddress()))
+                     if (!pClient->connect(deviceAddr))
                      {
                          displayTextLine("Connection failed.");
                          delay(UI_READ_DELAY);

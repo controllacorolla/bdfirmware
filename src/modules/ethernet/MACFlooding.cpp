@@ -36,6 +36,7 @@
 
 MACFlooding::MACFlooding() {
     setup();
+    if (!p || !netif) return;
     show_gui();
     loop();
 }
@@ -91,7 +92,7 @@ void MACFlooding::prepare_packet_hdr() {
     ipv4_pkt._len = htons(20);    // 20, total len
     ipv4_pkt._id = random(65535); // Avoid overflow limiting random to u16
     ipv4_pkt._offset = 0x0;
-    ipv4_pkt._ttl = static_cast<u8_t>(htons(0x40)); // TTL: 64
+    ipv4_pkt._ttl = 0x40; // TTL: 64
     ipv4_pkt._proto = 0x11;                         // Protocol: 17(UDP)
 
     // memcpy(&ipv4_pkt.dest.addr, broadcast_mac_address, 4);

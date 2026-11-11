@@ -339,7 +339,7 @@ static void mj_fingerprint(const uint8_t *rawBuf, uint8_t size, uint8_t channel)
         // Read payload length from PCF (upper 6 bits of byte [5])
         uint8_t payloadLength = buf[5] >> 2;
 
-        if (payloadLength == 0 || payloadLength > (size - 9)) continue;
+        if (payloadLength == 0 || size < 9 || payloadLength > (size - 9)) continue;
 
         // Extract and verify CRC16-CCITT
         uint16_t crcGiven = ((uint16_t)buf[6 + payloadLength] << 9) | ((uint16_t)buf[7 + payloadLength] << 1);

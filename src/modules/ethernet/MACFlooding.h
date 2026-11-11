@@ -22,9 +22,9 @@ private:
     eth_hdr eth_header;
     void send_packet();
     void show_gui();
-    struct pbuf *p;
-    struct netif *netif;
-    uint8_t *ethernet_frame;
+    struct pbuf *p = nullptr;
+    struct netif *netif = nullptr;
+    uint8_t *ethernet_frame = nullptr;
     void prepare_packet_hdr();
 
     // Surgically change ethernet frame to include new mac address

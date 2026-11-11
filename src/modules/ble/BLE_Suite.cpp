@@ -95,6 +95,7 @@ FastPairVersion detectFastPairVersion(NimBLEAddress target) { return FP_VERSION_
 
 ScannerData::ScannerData() {
     mutex = xSemaphoreCreateMutex();
+    if (!mutex) log_e("ScannerData: failed to create mutex");
     foundCount = 0;
     dataVersion = 0;
     snapshotCache = nullptr;
@@ -3309,7 +3310,7 @@ std::vector<FastPairDeviceInfo> FastPairExploitEngine::scanForFastPairDevices(in
             if (manufData.length() >= 3) {
                 const uint8_t *data = (const uint8_t *)manufData.data();
                 if (data[0] == 0x03 && data[1] == 0x03 && data[2] == 0x2C) {
-                    if (manufData.length() >= 7) { modelId = (data[6] << 16) | (data[7] << 8) | data[8]; }
+                    if (manufData.length() >= 9) { modelId = (data[6] << 16) | (data[7] << 8) | data[8]; }
                 }
             }
         }
@@ -4313,7 +4314,7 @@ String selectTargetFromScan(const char *title) {
     // size_t deviceCount = snapshot->count;
     size_t deviceCount = scannerData.deviceAddresses.size();
 
-    for (size_t i = 0; i < deviceCount - 1; i++) {
+    for (size_t i = 0; i + 1 < deviceCount; i++) {
         for (size_t j = i + 1; j < deviceCount; j++) {
             bool swapNeeded = false;
             if (snapshot->fastPair[j] && !snapshot->fastPair[i]) swapNeeded = true;

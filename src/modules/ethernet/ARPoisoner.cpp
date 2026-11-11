@@ -153,13 +153,13 @@ void ARPoisoner::sendARPPacket(
 
     // Enviar o pacote
     netif->linkoutput(netif, p);
-    pbuf_free(p);
     Serial.println("Pacote ARP enviado!");
 
-    // Capturar o pacote no arquivo PCAP
+    // Capturar o pacote no arquivo PCAP (before freeing pbuf)
     if (pcapFile) {
-        pcapFile.write((const uint8_t *)p->payload, p->tot_len); // don't know if it will work
+        pcapFile.write((const uint8_t *)p->payload, p->tot_len);
         pcapFile.flush();
     }
+    pbuf_free(p);
 }
 #endif

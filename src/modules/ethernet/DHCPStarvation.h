@@ -24,9 +24,9 @@ private:
     uint8_t broadcast_mac_address[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     void send_DHCP_packet();
     void show_gui();
-    struct pbuf *p;
-    struct netif *netif;
-    uint8_t *ethernet_frame;
+    struct pbuf *p = nullptr;
+    struct netif *netif = nullptr;
+    uint8_t *ethernet_frame = nullptr;
     void prepare_ethernet_hdr();
 
     // Fill UDP and IPV4 header structure

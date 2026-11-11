@@ -96,7 +96,7 @@ JSValue native_storageWrite(JSContext *ctx, JSValue *this_val, int argc, JSValue
     size_t dataSize = 0;
     const char *dataPtr = NULL;
     JSCStringBuf sb;
-    if (argc > 0 && JS_IsString(ctx, argv[1])) { dataPtr = JS_ToCStringLen(ctx, &dataSize, argv[1], &sb); }
+    if (argc > 1 && JS_IsString(ctx, argv[1])) { dataPtr = JS_ToCStringLen(ctx, &dataSize, argv[1], &sb); }
 
     FileParamsJS fileParams = js_get_path_from_params(ctx, argv, true);
     if (!fileParams.path.startsWith("/")) fileParams.path = "/" + fileParams.path;
@@ -150,7 +150,7 @@ JSValue native_storageWrite(JSContext *ctx, JSValue *this_val, int argc, JSValue
 
 JSValue native_storageRename(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv) {
     (void)this_val;
-    (void)argc;
+    if (argc < 2) return JS_ThrowTypeError(ctx, "storageRename requires two arguments");
     FileParamsJS oldFileParams = js_get_path_from_params(ctx, argv, true);
     JSCStringBuf nb;
     const char *newPath = JS_ToCString(ctx, argv[1], &nb);

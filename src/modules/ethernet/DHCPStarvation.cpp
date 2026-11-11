@@ -35,6 +35,7 @@
 
 DHCPStarvation::DHCPStarvation() {
     setup();
+    if (!p || !netif) return;
     show_gui();
     loop();
 }
