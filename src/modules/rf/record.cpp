@@ -126,7 +126,7 @@ static void rf_raw_record_accept_capture(
 
     if (status.lastSignalTime != 0) {
         unsigned long signalDurationMs = signalDuration / RMT_1MS_TICKS;
-        uint16_t gap = (uint16_t)(receivedTime - status.lastSignalTime - signalDurationMs - 5);
+        uint32_t gap = receivedTime - status.lastSignalTime - signalDurationMs - 5;
         recorded.gaps.push_back(gap);
     } else {
         status.firstSignalTime = receivedTime;
@@ -302,7 +302,7 @@ void rf_raw_record_create(RawRecording &recorded, bool &returnToMenu) {
     if (rx_ch == NULL) return;
     ESP_LOGI("RMT_SPECTRUM", "register RX done callback");
     QueueHandle_t receive_queue = xQueueCreate(1, sizeof(rmt_rx_done_event_data_t));
-    assert(receive_queue);
+    if (!receive_queue) { deinitRfModule(); return; }
     rmt_rx_event_callbacks_t cbs = {
         .on_recv_done = record_rmt_rx_done_callback,
     };
@@ -312,7 +312,7 @@ void rf_raw_record_create(RawRecording &recorded, bool &returnToMenu) {
         .signal_range_min_ns = 3000,     // 10us minimum signal duration
         .signal_range_max_ns = 12000000, // 24ms maximum signal duration
     };
-    rmt_symbol_word_t item[64];
+    rmt_symbol_word_t item[256];
     rmt_rx_done_event_data_t rx_data;
     ESP_ERROR_CHECK(rmt_receive(rx_ch, item, sizeof(item), &receive_config));
     Serial.println("RMT Initialized");

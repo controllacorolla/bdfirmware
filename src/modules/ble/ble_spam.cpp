@@ -328,9 +328,9 @@ char randomNameBuffer[32];
 
 const char *generateRandomName() {
     const char *charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    int len = rand() % 10 + 1;
+    int len = esp_random() % 10 + 1;
     if (len > 31) len = 31;
-    for (int i = 0; i < len; ++i) { randomNameBuffer[i] = charset[rand() % strlen(charset)]; }
+    for (int i = 0; i < len; ++i) { randomNameBuffer[i] = charset[esp_random() % strlen(charset)]; }
     randomNameBuffer[len] = '\0';
     return randomNameBuffer;
 }
@@ -451,7 +451,7 @@ BLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType Type, const S
             return AdvData;
         }
         case Google: {
-            const uint32_t model = android_models[rand() % android_models_count].value;
+            const uint32_t model = android_models[esp_random() % android_models_count].value;
             uint8_t Google_Data[14] = {
                 0x03,
                 0x03,
@@ -466,7 +466,7 @@ BLEAdvertisementData GetUniversalAdvertisementData(EBLEPayloadType Type, const S
                 (uint8_t)((model >> 0x00) & 0xFF),
                 0x02,
                 0x0A,
-                (uint8_t)((rand() % 120) - 100)
+                (uint8_t)((esp_random() % 120) - 100)
             };
             AdvData.addData(Google_Data, 14);
             break;

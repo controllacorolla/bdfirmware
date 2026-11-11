@@ -686,8 +686,8 @@ void generateRandomWiFiMac(uint8_t *mac) {
 char randomName[32];
 char *randomSSID() {
     const char *charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    int len = rand() % 22 + 7;
-    for (int i = 0; i < len; ++i) { randomName[i] = charset[rand() % strlen(charset)]; }
+    int len = esp_random() % 22 + 7;
+    for (int i = 0; i < len; ++i) { randomName[i] = charset[esp_random() % strlen(charset)]; }
     randomName[len] = '\0';
     return randomName;
 }

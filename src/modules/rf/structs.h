@@ -9,7 +9,7 @@ struct RawRecording {
     float frequency = 0.f;
     std::vector<rmt_symbol_word_t *> codes;
     std::vector<uint16_t> codeLengths;
-    std::vector<uint16_t> gaps;
+    std::vector<uint32_t> gaps;
 };
 
 struct RawRecordingStatus {

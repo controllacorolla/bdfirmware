@@ -191,9 +191,10 @@ void ReverseShell() {
 
         if (check(EscPress)) {
             tft.println("Exiting reverse shell server...");
-            tcpServer.stop();
             ws.closeAll();
+            delay(50);
             webServer.end();
+            tcpServer.stop();
             dnsServer.stop();
             break;
         }
