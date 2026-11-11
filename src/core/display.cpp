@@ -174,36 +174,36 @@ void displayRedStripe(const String &text, uint16_t fgcolor, uint16_t bgcolor) {
     if (fgcolor == bgcolor && fgcolor == TFT_WHITE) fgcolor = TFT_BLACK;
 
     // Calculate max chars per line based on font size
-    int maxCharsFM = (tftWidth - 20) / (LW * FM);
-    int maxCharsFP = (tftWidth - 20) / (LW * FP);
+    int maxCharsFM = (tftWidth - 28) / (LW * FM);
+    int maxCharsFP = (tftWidth - 28) / (LW * FP);
 
     // Determine if we need to wrap the text
     std::vector<String> wrappedLines;
-    int boxHeight = 26; // Default height for single line
 
-    if (text.length() * LW * FM < (tftWidth - 2 * FM * LW)) {
-        // Text fits with FM font
+    if ((int)(text.length() * LW * FM) < (tftWidth - 2 * FM * LW)) {
         size = FM;
         wrappedLines = wrapText(text, maxCharsFM);
     } else {
-        // Text needs FP font or larger
         size = FP;
         wrappedLines = wrapText(text, maxCharsFP);
     }
 
-    // Adjust box height based on number of lines
-    if (wrappedLines.size() > 1) { boxHeight = 13 + (wrappedLines.size() * (size == FM ? 8 : 10)); }
+    int lineHeight = size * LH + 2;
+    int padding = 8;
+    int boxHeight = wrappedLines.size() * lineHeight + padding * 2;
+    int boxY = tftHeight / 2 - boxHeight / 2;
+    int boxX = 10;
+    int boxW = tftWidth - 20;
 
     tft.drawPixel(0, 0, 0);
-    tft.fillRoundRect(10, tftHeight / 2 - boxHeight / 2, tftWidth - 20, boxHeight, 7, bgcolor);
+    tft.fillRoundRect(boxX, boxY, boxW, boxHeight, 5, bgcolor);
+    tft.drawRoundRect(boxX, boxY, boxW, boxHeight, 5, getColorVariation(bgcolor, 8, 1));
     tft.setTextColor(fgcolor, bgcolor);
     tft.setTextSize(size);
 
-    // Draw each line centered
-    int lineHeight = size == FM ? 8 : 10;
-    int startY = tftHeight / 2 - (wrappedLines.size() * lineHeight) / 2;
+    int startY = boxY + padding + (boxHeight - padding * 2 - (int)wrappedLines.size() * lineHeight) / 2;
     for (size_t i = 0; i < wrappedLines.size(); i++) {
-        tft.drawCentreString(wrappedLines[i], tftWidth / 2, startY + i * lineHeight);
+        tft.drawCentreString(wrappedLines[i], tftWidth / 2, startY + i * lineHeight, SMOOTH_FONT);
     }
 }
 
@@ -808,16 +808,16 @@ Opt_Coord drawOptions(
     for (i = 0; i < options.size(); i++) {
         if (i >= init) {
             int16_t cursorY = tft.getCursorY();
-            // Erase previously highlited element,
+            // Erase previously highlighted element
             if (i == last_index) {
                 tft.fillRoundRect(
-                    tftWidth * 0.10 + 2, cursorY + 2, tftWidth * 0.8 - 4, FM * LH + 2, 3, bruceConfig.bgColor
+                    tftWidth * 0.10 + 2, cursorY + 1, tftWidth * 0.8 - 4, FM * LH + 4, 4, bruceConfig.bgColor
                 );
             }
             // Draw selection highlight bar
             if (i == index) {
                 tft.fillRoundRect(
-                    tftWidth * 0.10 + 2, cursorY + 2, tftWidth * 0.8 - 4, FM * LH + 2, 3, bruceConfig.priColor
+                    tftWidth * 0.10 + 2, cursorY + 1, tftWidth * 0.8 - 4, FM * LH + 4, 4, bruceConfig.priColor
                 );
             }
 
@@ -869,49 +869,88 @@ void drawSubmenu(int index, std::vector<Option> &options, const char *title) {
     tft.fillRect(6, 30, tftWidth - 12, 8 * FP, bruceConfig.bgColor);
     tft.drawString(title, 12, 30);
 
-    // middle of the drawing area
-    int middle = 25 /*status*/ + (tftHeight - 30 /*status + bottom margin*/) / 2;
-    // drawCentreString uses TC_DATUM, so we need to adjust the Y position
-    // 42 ensures that title isnt touched( 30 + 8 (LH) + 4(Margin))
-    int middle_up = middle - (tftHeight - 42) / 3 - FM * LH / 2 + 4;
-    int middle_down = middle + (tftHeight - 42) / 3 - FM * LH / 2;
+    int topY = 42;
+    int bottomY = tftHeight - 6;
+    int usableH = bottomY - topY;
+    int itemH = FM * LH + 10;
 
-    tft.setTextSize(FM);
+    // Adapt visible count to screen height — always odd so selected is centered
+    int maxFit = usableH / itemH;
+    if (maxFit < 3) maxFit = 3;
+    if (maxFit > 5) maxFit = 5;
+    if (maxFit % 2 == 0) maxFit--;
+    int visibleCount = menuSize < maxFit ? menuSize : maxFit;
+    int centerSlot = visibleCount / 2;
+    int spacing = usableH / (visibleCount + 1);
+
+    // Clear content area
+    tft.fillRect(6, topY, tftWidth - 17, usableH, bruceConfig.bgColor);
+
 #if defined(HAS_TOUCH)
-    tft.drawCentreString("/\\", tftWidth / 2, middle_up - (FM * LH + 6), 1);
+    int touchArrowY = topY + spacing - FM * LH - 6;
+    if (touchArrowY >= topY) {
+        tft.setTextSize(FM);
+        tft.setTextColor(bruceConfig.secColor);
+        tft.drawCentreString("/\\", tftWidth / 2, touchArrowY, 1);
+    }
 #endif
-    // Previous item
-    int firstIndex = index - 1 >= 0 ? index - 1 : menuSize - 1;
-    const char *firstOption = options[firstIndex].label.c_str();
-    tft.setTextColor(options[firstIndex].enabled ? bruceConfig.secColor : TFT_DARKGREY);
-    tft.fillRect(6, middle_up, tftWidth - 12, 8 * FM, bruceConfig.bgColor);
-    tft.drawCentreString(firstOption, tftWidth / 2, middle_up, SMOOTH_FONT);
 
-    // Selected item
-    int selectedTextSize = options[index].label.length() <= tftWidth / (LW * FG) - 1 ? FG : FM;
-    tft.setTextSize(selectedTextSize);
-    tft.setTextColor(options[index].enabled ? bruceConfig.priColor : TFT_DARKGREY);
-    tft.fillRect(6, middle - FG * LH / 2 - 1, tftWidth - 12, FG * LH + 5, bruceConfig.bgColor);
-    tft.drawCentreString(options[index].label, tftWidth / 2, middle - selectedTextSize * LH / 2, SMOOTH_FONT);
-    tft.drawFastHLine(
-        tftWidth / 2 - strlen(options[index].label.c_str()) * selectedTextSize * LW / 2,
-        middle + selectedTextSize * LH / 2 + 1,
-        strlen(options[index].label.c_str()) * selectedTextSize * LW,
-        bruceConfig.priColor
-    );
-    // Next Item
-    int thirdIndex = index + 1 < menuSize ? index + 1 : 0;
-    const char *thirdOption = options[thirdIndex].label.c_str();
-    tft.setTextSize(FM);
-    tft.setTextColor(options[thirdIndex].enabled ? bruceConfig.secColor : TFT_DARKGREY);
-    tft.fillRect(6, middle_down, tftWidth - 12, 8 * FM, bruceConfig.bgColor);
-    tft.drawCentreString(thirdOption, tftWidth / 2, middle_down, SMOOTH_FONT);
+    for (int slot = 0; slot < visibleCount; slot++) {
+        int offset = slot - centerSlot;
+        int itemIdx = (index + offset % menuSize + menuSize) % menuSize;
+        int itemY = topY + spacing * (slot + 1);
 
-    tft.fillRect(tftWidth - 5, 0, 5, tftHeight, bruceConfig.bgColor);
-    tft.fillRect(tftWidth - 5, index * tftHeight / menuSize, 5, tftHeight / menuSize, bruceConfig.priColor);
+        if (slot == centerSlot) {
+            // Selected item — use FG only on tall screens where it won't overlap
+            bool useLarge = spacing >= (FG * LH + 10) &&
+                            (int)options[itemIdx].label.length() <= tftWidth / (LW * FG) - 2;
+            int selSize = useLarge ? FG : FM;
+            int textW = strlen(options[itemIdx].label.c_str()) * selSize * LW;
+            int pillW = textW + 12;
+            int pillH = selSize * LH + 6;
+            int pillX = tftWidth / 2 - pillW / 2;
+            int pillY = itemY - pillH / 2;
+            tft.fillRoundRect(pillX, pillY, pillW, pillH, 4,
+                              getColorVariation(bruceConfig.priColor, 25, -1));
+            tft.setTextSize(selSize);
+            tft.setTextColor(options[itemIdx].enabled ? bruceConfig.priColor : TFT_DARKGREY);
+            tft.drawCentreString(options[itemIdx].label, tftWidth / 2,
+                                 itemY - selSize * LH / 2, SMOOTH_FONT);
+        } else {
+            int dist = abs(offset);
+            uint16_t color;
+            if (!options[itemIdx].enabled) {
+                color = TFT_DARKGREY;
+            } else if (dist >= 2) {
+                color = getColorVariation(bruceConfig.secColor, 20, -1);
+            } else {
+                color = bruceConfig.secColor;
+            }
+            tft.setTextSize(FM);
+            tft.setTextColor(color);
+            tft.drawCentreString(options[itemIdx].label, tftWidth / 2,
+                                 itemY - FM * LH / 2, SMOOTH_FONT);
+        }
+    }
+
+    // Scroll indicator — thin bar + position marker
+    tft.fillRect(tftWidth - 8, topY, 8, usableH, bruceConfig.bgColor);
+    if (menuSize > 1) {
+        int barX = tftWidth - 4;
+        int barH = usableH - 10;
+        int barTopY = topY + 5;
+        tft.drawFastVLine(barX, barTopY, barH, getColorVariation(bruceConfig.secColor, 20, -1));
+        int markerY = barTopY + (int)((long)index * (barH - 6) / (menuSize - 1));
+        tft.fillRoundRect(barX - 2, markerY, 5, 6, 2, bruceConfig.priColor);
+    }
 
 #if defined(HAS_TOUCH)
-    tft.drawCentreString("\\/", tftWidth / 2, middle_down + (FM * LH + 6), 1);
+    int touchArrowDownY = topY + spacing * visibleCount + 4;
+    if (touchArrowDownY + FM * LH < tftHeight) {
+        tft.setTextSize(FM);
+        tft.setTextColor(bruceConfig.secColor);
+        tft.drawCentreString("\\/", tftWidth / 2, touchArrowDownY, 1);
+    }
     tft.setTextColor(getColorVariation(bruceConfig.priColor), bruceConfig.bgColor);
     tft.drawString("[ x ]", 7, 7, 1);
     TouchFooter();

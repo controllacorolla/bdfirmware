@@ -49,49 +49,35 @@ public:
         );
 
         int arrowSize = scale * 10;
-        int lineWidth = scale * 3;
+        int lineWidth = scale * 2.5;
+        if (lineWidth < 2) lineWidth = 2;
 
         int arrowX = BORDER_PAD_X + 1.5 * arrowSize;
         int arrowY = iconCenterY + 1.5 * arrowSize;
+        uint16_t arrowColor = getColorVariation(bruceConfig.priColor, 6, -1);
 
         // Left Arrow
         tft.drawWideLine(
-            arrowX,
-            arrowY,
-            arrowX + arrowSize,
-            arrowY + arrowSize,
-            lineWidth,
-            bruceConfig.priColor,
-            bruceConfig.bgColor
+            arrowX, arrowY,
+            arrowX + arrowSize, arrowY + arrowSize,
+            lineWidth, arrowColor, bruceConfig.bgColor
         );
         tft.drawWideLine(
-            arrowX,
-            arrowY,
-            arrowX + arrowSize,
-            arrowY - arrowSize,
-            lineWidth,
-            bruceConfig.priColor,
-            bruceConfig.bgColor
+            arrowX, arrowY,
+            arrowX + arrowSize, arrowY - arrowSize,
+            lineWidth, arrowColor, bruceConfig.bgColor
         );
 
         // Right Arrow
         tft.drawWideLine(
-            tftWidth - arrowX,
-            arrowY,
-            tftWidth - arrowX - arrowSize,
-            arrowY + arrowSize,
-            lineWidth,
-            bruceConfig.priColor,
-            bruceConfig.bgColor
+            tftWidth - arrowX, arrowY,
+            tftWidth - arrowX - arrowSize, arrowY + arrowSize,
+            lineWidth, arrowColor, bruceConfig.bgColor
         );
         tft.drawWideLine(
-            tftWidth - arrowX,
-            arrowY,
-            tftWidth - arrowX - arrowSize,
-            arrowY - arrowSize,
-            lineWidth,
-            bruceConfig.priColor,
-            bruceConfig.bgColor
+            tftWidth - arrowX, arrowY,
+            tftWidth - arrowX - arrowSize, arrowY - arrowSize,
+            lineWidth, arrowColor, bruceConfig.bgColor
         );
     }
 
@@ -100,9 +86,17 @@ public:
 
         tft.setTextSize(FM);
         tft.drawPixel(0, 0, 0);
-        tft.fillRect(arrowAreaX, titleY, tftWidth - 2 * arrowAreaX, LH * FM, bruceConfig.bgColor);
+        tft.fillRect(arrowAreaX, titleY - 3, tftWidth - 2 * arrowAreaX, LH * FM + 6, bruceConfig.bgColor);
         int nchars = (tftWidth - 16) / (LW * FM);
-        tft.drawCentreString(getName().substring(0, nchars), iconCenterX, titleY, 1);
+        String name = getName().substring(0, nchars);
+        int textW = name.length() * FM * LW;
+        int pillW = textW + 16;
+        int pillX = iconCenterX - pillW / 2;
+        tft.fillRoundRect(pillX, titleY - 3, pillW, LH * FM + 6, 4,
+                          getColorVariation(bruceConfig.priColor, 25, -1));
+        tft.setTextColor(bruceConfig.priColor, getColorVariation(bruceConfig.priColor, 25, -1));
+        tft.drawCentreString(name, iconCenterX, titleY, 1);
+        tft.setTextColor(bruceConfig.priColor, bruceConfig.bgColor);
     }
 
 protected:
